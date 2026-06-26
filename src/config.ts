@@ -21,10 +21,10 @@ export const BUILT_IN_CONFIG = {
   token: '',
 
   // Your GitHub username (or org name)
-  repoOwner: '',
+  repoOwner: 'tassiost',
 
   // Your repo name (e.g., 'wedding-photos')
-  repoName: '',
+  repoName: 'wedding',
 
   // The branch to save photos to (usually 'main')
   branch: 'main',
