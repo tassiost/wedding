@@ -19,7 +19,7 @@
 
 export const BUILT_IN_CONFIG = {
   // Your GitHub Personal Access Token (with 'repo' scope)
-  token: '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',
+  token: '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',
 
   // Your GitHub username (or org name)
   repoOwner: 'tassiost',
@@ -29,8 +29,6 @@ export const BUILT_IN_CONFIG = {
 
   // The branch to save photos to (usually 'main')
   branch: 'main',
-  // Force rebuild
-  forceRebuild: true,
 };
 
 // Set this to TRUE to disable the Settings page for guests.
