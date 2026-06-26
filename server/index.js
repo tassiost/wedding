@@ -194,6 +194,158 @@ app.delete('/api/photos/:id', async (req, res) => {
   }
 });
 
+// Like/unlike photo
+app.post('/api/photos/:id/like', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { guestName } = req.body;
+
+    // Fetch current photos
+    const response = await fetch(
+      `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${PHOTOS_FILE_PATH}?ref=${BRANCH}`,
+      { headers: getHeaders() }
+    );
+
+    if (!response.ok) {
+      throw new Error('Failed to fetch photos');
+    }
+
+    const fileData = await response.json();
+    const content = Buffer.from(fileData.content, 'base64').toString('utf-8');
+    const data = JSON.parse(content);
+
+    // Find and update photo
+    const photoIndex = data.photos.findIndex(p => p.id === id);
+    if (photoIndex === -1) {
+      return res.status(404).json({ error: 'Photo not found' });
+    }
+
+    const photo = data.photos[photoIndex];
+    if (!photo.likedBy) photo.likedBy = [];
+    if (!photo.likes) photo.likes = 0;
+
+    const likeIndex = photo.likedBy.indexOf(guestName);
+    if (likeIndex === -1) {
+      // Add like
+      photo.likedBy.push(guestName);
+      photo.likes = photo.likedBy.length;
+    } else {
+      // Remove like
+      photo.likedBy.splice(likeIndex, 1);
+      photo.likes = photo.likedBy.length;
+    }
+
+    data.photos[photoIndex] = photo;
+
+    // Save updated photos
+    const updatedData = {
+      photos: data.photos,
+      lastUpdated: new Date().toISOString(),
+    };
+
+    const newContent = Buffer.from(JSON.stringify(updatedData, null, 2)).toString('base64');
+
+    const body = {
+      message: 'Update photo likes',
+      content: newContent,
+      branch: BRANCH,
+      sha: fileData.sha,
+    };
+
+    const putResponse = await fetch(
+      `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${PHOTOS_FILE_PATH}`,
+      {
+        method: 'PUT',
+        headers: getHeaders(),
+        body: JSON.stringify(body),
+      }
+    );
+
+    if (!putResponse.ok) {
+      throw new Error('Failed to update likes');
+    }
+
+    res.json({ likes: photo.likes, likedBy: photo.likedBy });
+  } catch (error) {
+    console.error('Error updating likes:', error);
+    res.status(500).json({ error: 'Failed to update likes' });
+  }
+});
+
+// Add comment to photo
+app.post('/api/photos/:id/comments', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { text, author } = req.body;
+
+    // Fetch current photos
+    const response = await fetch(
+      `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${PHOTOS_FILE_PATH}?ref=${BRANCH}`,
+      { headers: getHeaders() }
+    );
+
+    if (!response.ok) {
+      throw new Error('Failed to fetch photos');
+    }
+
+    const fileData = await response.json();
+    const content = Buffer.from(fileData.content, 'base64').toString('utf-8');
+    const data = JSON.parse(content);
+
+    // Find and update photo
+    const photoIndex = data.photos.findIndex(p => p.id === id);
+    if (photoIndex === -1) {
+      return res.status(404).json({ error: 'Photo not found' });
+    }
+
+    const photo = data.photos[photoIndex];
+    if (!photo.comments) photo.comments = [];
+
+    const newComment = {
+      id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      text,
+      author: author || 'Anonymous',
+      timestamp: new Date().toISOString(),
+    };
+
+    photo.comments.push(newComment);
+    data.photos[photoIndex] = photo;
+
+    // Save updated photos
+    const updatedData = {
+      photos: data.photos,
+      lastUpdated: new Date().toISOString(),
+    };
+
+    const newContent = Buffer.from(JSON.stringify(updatedData, null, 2)).toString('base64');
+
+    const body = {
+      message: 'Add photo comment',
+      content: newContent,
+      branch: BRANCH,
+      sha: fileData.sha,
+    };
+
+    const putResponse = await fetch(
+      `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${PHOTOS_FILE_PATH}`,
+      {
+        method: 'PUT',
+        headers: getHeaders(),
+        body: JSON.stringify(body),
+      }
+    );
+
+    if (!putResponse.ok) {
+      throw new Error('Failed to add comment');
+    }
+
+    res.json(newComment);
+  } catch (error) {
+    console.error('Error adding comment:', error);
+    res.status(500).json({ error: 'Failed to add comment' });
+  }
+});
+
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });

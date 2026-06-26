@@ -3,9 +3,10 @@ import { useApp } from '@/hooks/useAppContext';
 import { Link } from 'react-router';
 import { ImagePlus, Loader2, X, User, Clock, RefreshCw, Download, ChevronLeft, ChevronRight, Heart, MessageCircle, Grid, LayoutTemplate, Calendar } from 'lucide-react';
 import Toast from '@/components/Toast';
+import { likePhoto, addComment as addCommentApi } from '@/lib/githubApi';
 
 export default function Gallery() {
-  const { photos, loadPhotos, isLoading, isAuthenticated } = useApp();
+  const { photos, loadPhotos, isLoading, isAuthenticated, githubConfig } = useApp();
   const [lightboxPhoto, setLightboxPhoto] = useState<string | null>(null);
   const [lightboxCaption, setLightboxCaption] = useState('');
   const [lightboxMeta, setLightboxMeta] = useState('');
@@ -18,16 +19,10 @@ export default function Gallery() {
   const [filterGuest, setFilterGuest] = useState('');
   const [filterDate, setFilterDate] = useState('');
   const [layout, setLayout] = useState<'grid' | 'masonry' | 'timeline'>('grid');
-  const [likedPhotos, setLikedPhotos] = useState<Set<string>>(() => {
-    const saved = localStorage.getItem('weddingLikedPhotos');
-    return saved ? new Set(JSON.parse(saved)) : new Set();
-  });
-  const [comments, setComments] = useState<Record<string, Array<{id: string, text: string, author: string, timestamp: string}>>>(() => {
-    const saved = localStorage.getItem('weddingPhotoComments');
-    return saved ? JSON.parse(saved) : {};
-  });
   const [newComment, setNewComment] = useState('');
   const [showComments, setShowComments] = useState(false);
+  const [isLiking, setIsLiking] = useState(false);
+  const [isPostingComment, setIsPostingComment] = useState(false);
 
   const showToast = (message: string) => {
     setToast({ message, visible: true });
@@ -59,16 +54,6 @@ export default function Gallery() {
     }
     setPhotoCount(photos.length);
   }, [photos.length]);
-
-  // Persist liked photos
-  useEffect(() => {
-    localStorage.setItem('weddingLikedPhotos', JSON.stringify(Array.from(likedPhotos)));
-  }, [likedPhotos]);
-
-  // Persist comments
-  useEffect(() => {
-    localStorage.setItem('weddingPhotoComments', JSON.stringify(comments));
-  }, [comments]);
 
   // Slideshow auto-advance
   useEffect(() => {
@@ -127,37 +112,40 @@ export default function Gallery() {
     setLightboxIndex(prevIndex);
   };
 
-  const toggleLike = (photoId: string) => {
-    setLikedPhotos(prev => {
-      const newSet = new Set(prev);
-      if (newSet.has(photoId)) {
-        newSet.delete(photoId);
-      } else {
-        newSet.add(photoId);
-      }
-      return newSet;
-    });
+  const toggleLike = async (photoId: string) => {
+    if (!githubConfig || isLiking) return;
+    setIsLiking(true);
+    try {
+      const guestName = localStorage.getItem('weddingGuestName') || 'Anonymous';
+      await likePhoto(githubConfig, photoId, guestName);
+      await loadPhotos(); // Reload to get updated likes
+    } catch (error) {
+      console.error('Failed to like photo:', error);
+      showToast('Failed to like photo');
+    } finally {
+      setIsLiking(false);
+    }
   };
 
-  const addComment = (photoId: string, text: string) => {
-    if (!text.trim()) return;
-    const guestName = localStorage.getItem('weddingGuestName') || 'Anonymous';
-    const newComment = {
-      id: Date.now().toString(),
-      text,
-      author: guestName,
-      timestamp: new Date().toISOString(),
-    };
-    setComments(prev => ({
-      ...prev,
-      [photoId]: [...(prev[photoId] || []), newComment],
-    }));
-    setNewComment('');
+  const addComment = async (photoId: string, text: string) => {
+    if (!text.trim() || !githubConfig || isPostingComment) return;
+    setIsPostingComment(true);
+    try {
+      const guestName = localStorage.getItem('weddingGuestName') || 'Anonymous';
+      await addCommentApi(githubConfig, photoId, text, guestName);
+      await loadPhotos(); // Reload to get updated comments
+      setNewComment('');
+    } catch (error) {
+      console.error('Failed to add comment:', error);
+      showToast('Failed to add comment');
+    } finally {
+      setIsPostingComment(false);
+    }
   };
 
   const getFilteredPhotos = () => {
     return photos.filter(photo => {
-      const matchesSearch = !searchQuery || 
+      const matchesSearch = !searchQuery ||
         photo.caption?.toLowerCase().includes(searchQuery.toLowerCase()) ||
         photo.guestName?.toLowerCase().includes(searchQuery.toLowerCase());
       const matchesGuest = !filterGuest || photo.guestName === filterGuest;
@@ -187,6 +175,11 @@ export default function Gallery() {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+  };
+
+  const isLikedByUser = (photo: typeof photos[0]) => {
+    const guestName = localStorage.getItem('weddingGuestName') || 'Anonymous';
+    return photo.likedBy?.includes(guestName) || false;
   };
 
   // Close lightbox on escape key, navigate with arrows
@@ -363,9 +356,9 @@ export default function Gallery() {
                       <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                         <button
                           onClick={(e) => { e.stopPropagation(); toggleLike(photo.id); }}
-                          className={`p-1.5 rounded-full ${likedPhotos.has(photo.id) ? 'bg-red-500 text-white' : 'bg-white/90 text-[#2c2c2c]'} transition-colors`}
+                          className={`p-1.5 rounded-full ${isLikedByUser(photo) ? 'bg-red-500 text-white' : 'bg-white/90 text-[#2c2c2c]'} transition-colors`}
                         >
-                          <Heart className={`w-4 h-4 ${likedPhotos.has(photo.id) ? 'fill-current' : ''}`} />
+                          <Heart className={`w-4 h-4 ${isLikedByUser(photo) ? 'fill-current' : ''}`} />
                         </button>
                       </div>
                     </div>
@@ -386,11 +379,11 @@ export default function Gallery() {
                       <div className="flex items-center gap-2 mt-2 text-xs text-[#6b6b6b]">
                         <span className="flex items-center gap-1">
                           <Heart className="w-3 h-3" />
-                          {likedPhotos.has(photo.id) ? 1 : 0}
+                          {photo.likes || 0}
                         </span>
                         <span className="flex items-center gap-1">
                           <MessageCircle className="w-3 h-3" />
-                          {(comments[photo.id] || []).length}
+                          {(photo.comments || []).length}
                         </span>
                       </div>
                     </div>
@@ -418,9 +411,9 @@ export default function Gallery() {
                       <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                         <button
                           onClick={(e) => { e.stopPropagation(); toggleLike(photo.id); }}
-                          className={`p-1.5 rounded-full ${likedPhotos.has(photo.id) ? 'bg-red-500 text-white' : 'bg-white/90 text-[#2c2c2c]'} transition-colors`}
+                          className={`p-1.5 rounded-full ${isLikedByUser(photo) ? 'bg-red-500 text-white' : 'bg-white/90 text-[#2c2c2c]'} transition-colors`}
                         >
-                          <Heart className={`w-4 h-4 ${likedPhotos.has(photo.id) ? 'fill-current' : ''}`} />
+                          <Heart className={`w-4 h-4 ${isLikedByUser(photo) ? 'fill-current' : ''}`} />
                         </button>
                       </div>
                     </div>
@@ -547,10 +540,10 @@ export default function Gallery() {
             </button>
             <button
               onClick={(e) => { e.stopPropagation(); toggleLike(filteredPhotos[lightboxIndex]?.id || ''); }}
-              className={`w-10 h-10 flex items-center justify-center transition-colors ${likedPhotos.has(filteredPhotos[lightboxIndex]?.id || '') ? 'text-red-500' : 'text-white hover:text-red-500'}`}
+              className={`w-10 h-10 flex items-center justify-center transition-colors ${isLikedByUser(filteredPhotos[lightboxIndex]) ? 'text-red-500' : 'text-white hover:text-red-500'}`}
               title="Like photo"
             >
-              <Heart className={`w-6 h-6 ${likedPhotos.has(filteredPhotos[lightboxIndex]?.id || '') ? 'fill-current' : ''}`} />
+              <Heart className={`w-6 h-6 ${isLikedByUser(filteredPhotos[lightboxIndex]) ? 'fill-current' : ''}`} />
             </button>
             <button
               onClick={(e) => { e.stopPropagation(); setShowComments(!showComments); }}
@@ -590,10 +583,10 @@ export default function Gallery() {
             >
               <div className="max-w-2xl mx-auto">
                 <h3 className="text-white text-lg mb-4" style={{ fontFamily: 'Georgia, serif' }}>
-                  Comments {(comments[filteredPhotos[lightboxIndex]?.id] || []).length}
+                  Comments {(filteredPhotos[lightboxIndex]?.comments || []).length}
                 </h3>
                 <div className="space-y-3 mb-4">
-                  {(comments[filteredPhotos[lightboxIndex]?.id] || []).map((comment: any) => (
+                  {(filteredPhotos[lightboxIndex]?.comments || []).map((comment: any) => (
                     <div key={comment.id} className="bg-white/10 rounded-lg p-3">
                       <div className="flex items-center justify-between mb-1">
                         <span className="text-white font-semibold text-sm">{comment.author}</span>
@@ -614,9 +607,10 @@ export default function Gallery() {
                   />
                   <button
                     onClick={() => addComment(filteredPhotos[lightboxIndex]?.id || '', newComment)}
-                    className="px-4 py-2 bg-[#c9a96e] text-white rounded-lg hover:bg-[#b8995e] transition-colors"
+                    disabled={isPostingComment}
+                    className="px-4 py-2 bg-[#c9a96e] text-white rounded-lg hover:bg-[#b8995e] transition-colors disabled:opacity-50"
                   >
-                    Post
+                    {isPostingComment ? 'Posting...' : 'Post'}
                   </button>
                 </div>
               </div>

@@ -81,3 +81,35 @@ export async function verifyToken(config: GitHubConfig): Promise<boolean> {
   // Backend handles authentication, so we just check if config exists
   return true;
 }
+
+export async function likePhoto(config: GitHubConfig, photoId: string, guestName: string): Promise<{ likes: number; likedBy: string[] }> {
+  const response = await fetch(`${API_BASE_URL}/api/photos/${photoId}/like`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ guestName }),
+  });
+
+  if (!response.ok) {
+    throw new Error('Failed to like photo');
+  }
+
+  return response.json();
+}
+
+export async function addComment(config: GitHubConfig, photoId: string, text: string, author: string): Promise<any> {
+  const response = await fetch(`${API_BASE_URL}/api/photos/${photoId}/comments`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ text, author }),
+  });
+
+  if (!response.ok) {
+    throw new Error('Failed to add comment');
+  }
+
+  return response.json();
+}
