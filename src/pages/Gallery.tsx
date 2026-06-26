@@ -20,7 +20,7 @@ export default function Gallery() {
   const [filterDate, setFilterDate] = useState('');
   const [layout, setLayout] = useState<'grid' | 'masonry' | 'timeline'>('grid');
   const [newComment, setNewComment] = useState('');
-  const [showComments, setShowComments] = useState(false);
+  const [showComments, setShowComments] = useState(true);
   const [isLiking, setIsLiking] = useState(false);
   const [isPostingComment, setIsPostingComment] = useState(false);
 
