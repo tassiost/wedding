@@ -509,7 +509,7 @@ export default function Gallery() {
       {lightboxPhoto && (
         <div
           onClick={closeLightbox}
-          className="fixed inset-0 z-[1000] bg-black/92 flex items-center justify-center p-4 sm:p-8"
+          className="fixed inset-0 z-[1000] bg-black flex items-center justify-center p-4 sm:p-8"
         >
           <button
             onClick={closeLightbox}
