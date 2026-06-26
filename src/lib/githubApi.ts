@@ -1,7 +1,7 @@
 import type { Photo, GitHubConfig } from '@/types';
 
 const PHOTOS_FILE_PATH = 'data/photos.json';
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://wedding-backend-6g10.onrender.com';
 
 interface PhotosData {
   photos: Photo[];
