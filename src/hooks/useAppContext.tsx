@@ -149,28 +149,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setIsLoading(true);
     setUploadProgress(0);
     try {
-      const currentPhotos = await fetchPhotos(githubConfig);
       const newPhotos: Photo[] = [];
 
       for (let i = 0; i < files.length; i++) {
         const file = files[i];
-        const dataUrl = await fileToDataUrl(file);
-        const photo: Photo = {
-          id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-          filename: file.name,
-          caption: captions[i] || '',
-          guestName: guestName || 'Anonymous',
-          uploadedAt: new Date().toISOString(),
-          dataUrl,
-          fileSize: file.size,
-        };
+        const photo = await uploadPhoto(githubConfig, file, captions[i] || '', guestName || 'Anonymous');
         newPhotos.push(photo);
         setUploadProgress(Math.round(((i + 1) / files.length) * 100));
       }
 
-      const allPhotos = [...newPhotos, ...currentPhotos];
-      await savePhotos(githubConfig, allPhotos);
-      setPhotos(allPhotos);
+      setPhotos(prev => [...newPhotos, ...prev]);
       return newPhotos.length;
     } finally {
       setIsLoading(false);
