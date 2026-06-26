@@ -8,10 +8,8 @@
       "uploadedAt": "2026-06-26T05:03:58.556Z",
       "dataUrl": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABAQMAAAAl21bKAAAAA1BMVEUA/wA0XsCoAAAAAXRSTlN/gFy0ywAAAApJREFUeJxjYAAAAAIAAUivpHEAAAAASUVORK5CYII=",
       "fileSize": 95,
-      "likedBy": [
-        "a"
-      ],
-      "likes": 1
+      "likedBy": [],
+      "likes": 0
     },
     {
       "id": "1782449937390-xsfwo4gj5",
@@ -249,5 +247,5 @@
       "fileSize": 95
     }
   ],
-  "lastUpdated": "2026-06-26T05:04:09.309Z"
+  "lastUpdated": "2026-06-26T05:04:12.818Z"
 }
