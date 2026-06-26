@@ -18,7 +18,7 @@
 
 export const BUILT_IN_CONFIG = {
   // Your GitHub Personal Access Token (with 'repo' scope)
-  token: '',
+  token: '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',
 
   // Your GitHub username (or org name)
   repoOwner: 'tassiost',
@@ -33,4 +33,4 @@ export const BUILT_IN_CONFIG = {
 // Set this to TRUE to disable the Settings page for guests.
 // Only do this AFTER you've baked in your config above and
 // confirmed it works. When true, the Setup nav link is hidden.
-export const HIDE_SETTINGS = false;
+export const HIDE_SETTINGS = true;
