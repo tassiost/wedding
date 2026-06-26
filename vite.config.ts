@@ -6,6 +6,9 @@ import { defineConfig } from "vite"
 export default defineConfig({
   base: '/wedding/',
   plugins: [react()],
+  build: {
+    outDir: 'docs',
+  },
   server: {
     port: 3000,
   },
