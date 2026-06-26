@@ -123,8 +123,6 @@ export default function Gallery() {
       const currentCount = photos.length;
       await loadPhotos();
       setPhotoCount(currentCount); // Prevent false upload toast
-      // Soft reload to show changes immediately
-      navigate(0);
     } catch (error) {
       console.error('Failed to like photo:', error);
       showToast('Failed to like photo');
@@ -144,8 +142,6 @@ export default function Gallery() {
       await loadPhotos();
       setPhotoCount(currentCount); // Prevent false upload toast
       setNewComment('');
-      // Soft reload to show changes immediately
-      navigate(0);
     } catch (error) {
       console.error('Failed to add comment:', error);
       showToast('Failed to add comment');
