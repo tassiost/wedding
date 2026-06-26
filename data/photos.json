@@ -16,7 +16,11 @@
       "guestName": "Test Guest",
       "uploadedAt": "2026-06-26T04:53:30.436Z",
       "dataUrl": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABAQMAAAAl21bKAAAAA1BMVEUA/wA0XsCoAAAAAXRSTlN/gFy0ywAAAApJREFUeJxjYAAAAAIAAUivpHEAAAAASUVORK5CYII=",
-      "fileSize": 95
+      "fileSize": 95,
+      "likedBy": [
+        "Anonymous"
+      ],
+      "likes": 1
     },
     {
       "id": "1782449605222-vwbxt2t64",
@@ -120,5 +124,5 @@
       "fileSize": 95
     }
   ],
-  "lastUpdated": "2026-06-26T04:54:17.871Z"
+  "lastUpdated": "2026-06-26T04:54:19.224Z"
 }
