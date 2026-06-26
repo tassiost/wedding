@@ -1,3 +1,10 @@
+export interface Comment {
+  id: string;
+  text: string;
+  author: string;
+  timestamp: string;
+}
+
 export interface Photo {
   id: string;
   filename: string;
@@ -6,6 +13,9 @@ export interface Photo {
   uploadedAt: string;
   dataUrl: string;
   fileSize: number;
+  likes: number;
+  likedBy: string[]; // Array of guest names who liked
+  comments: Comment[];
 }
 
 export interface WeddingSettings {

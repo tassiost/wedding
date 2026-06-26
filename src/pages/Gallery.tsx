@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useApp } from '@/hooks/useAppContext';
 import { Link } from 'react-router';
-import { ImagePlus, Loader2, X, User, Clock, RefreshCw } from 'lucide-react';
+import { ImagePlus, Loader2, X, User, Clock, RefreshCw, Download, ChevronLeft, ChevronRight, Heart, MessageCircle, Grid, LayoutTemplate, Calendar } from 'lucide-react';
 import Toast from '@/components/Toast';
 
 export default function Gallery() {
@@ -9,9 +9,25 @@ export default function Gallery() {
   const [lightboxPhoto, setLightboxPhoto] = useState<string | null>(null);
   const [lightboxCaption, setLightboxCaption] = useState('');
   const [lightboxMeta, setLightboxMeta] = useState('');
+  const [lightboxIndex, setLightboxIndex] = useState(0);
   const [toast, setToast] = useState({ message: '', visible: false });
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [photoCount, setPhotoCount] = useState(0);
+  const [isSlideshow, setIsSlideshow] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filterGuest, setFilterGuest] = useState('');
+  const [filterDate, setFilterDate] = useState('');
+  const [layout, setLayout] = useState<'grid' | 'masonry' | 'timeline'>('grid');
+  const [likedPhotos, setLikedPhotos] = useState<Set<string>>(() => {
+    const saved = localStorage.getItem('weddingLikedPhotos');
+    return saved ? new Set(JSON.parse(saved)) : new Set();
+  });
+  const [comments, setComments] = useState<Record<string, Array<{id: string, text: string, author: string, timestamp: string}>>>(() => {
+    const saved = localStorage.getItem('weddingPhotoComments');
+    return saved ? JSON.parse(saved) : {};
+  });
+  const [newComment, setNewComment] = useState('');
+  const [showComments, setShowComments] = useState(false);
 
   const showToast = (message: string) => {
     setToast({ message, visible: true });
@@ -44,6 +60,26 @@ export default function Gallery() {
     setPhotoCount(photos.length);
   }, [photos.length]);
 
+  // Persist liked photos
+  useEffect(() => {
+    localStorage.setItem('weddingLikedPhotos', JSON.stringify(Array.from(likedPhotos)));
+  }, [likedPhotos]);
+
+  // Persist comments
+  useEffect(() => {
+    localStorage.setItem('weddingPhotoComments', JSON.stringify(comments));
+  }, [comments]);
+
+  // Slideshow auto-advance
+  useEffect(() => {
+    if (isSlideshow && lightboxPhoto !== null) {
+      const interval = setInterval(() => {
+        nextPhoto();
+      }, 3000);
+      return () => clearInterval(interval);
+    }
+  }, [isSlideshow, lightboxPhoto]);
+
   const handleRefresh = async () => {
     setIsRefreshing(true);
     await loadPhotos();
@@ -51,10 +87,11 @@ export default function Gallery() {
     showToast('Gallery refreshed');
   };
 
-  const openLightbox = (photo: typeof photos[0]) => {
+  const openLightbox = (photo: typeof photos[0], index: number) => {
     setLightboxPhoto(photo.dataUrl);
     setLightboxCaption(photo.caption);
     setLightboxMeta(`By ${photo.guestName || 'Anonymous'} • ${formatDate(photo.uploadedAt)}`);
+    setLightboxIndex(index);
     document.body.style.overflow = 'hidden';
   };
 
@@ -62,17 +99,108 @@ export default function Gallery() {
     setLightboxPhoto(null);
     setLightboxCaption('');
     setLightboxMeta('');
+    setLightboxIndex(0);
+    setIsSlideshow(false);
+    setShowComments(false);
     document.body.style.overflow = '';
   };
 
-  // Close lightbox on escape key
+  const nextPhoto = () => {
+    const filtered = getFilteredPhotos();
+    if (filtered.length === 0) return;
+    const nextIndex = (lightboxIndex + 1) % filtered.length;
+    const photo = filtered[nextIndex];
+    setLightboxPhoto(photo.dataUrl);
+    setLightboxCaption(photo.caption);
+    setLightboxMeta(`By ${photo.guestName || 'Anonymous'} • ${formatDate(photo.uploadedAt)}`);
+    setLightboxIndex(nextIndex);
+  };
+
+  const prevPhoto = () => {
+    const filtered = getFilteredPhotos();
+    if (filtered.length === 0) return;
+    const prevIndex = (lightboxIndex - 1 + filtered.length) % filtered.length;
+    const photo = filtered[prevIndex];
+    setLightboxPhoto(photo.dataUrl);
+    setLightboxCaption(photo.caption);
+    setLightboxMeta(`By ${photo.guestName || 'Anonymous'} • ${formatDate(photo.uploadedAt)}`);
+    setLightboxIndex(prevIndex);
+  };
+
+  const toggleLike = (photoId: string) => {
+    setLikedPhotos(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(photoId)) {
+        newSet.delete(photoId);
+      } else {
+        newSet.add(photoId);
+      }
+      return newSet;
+    });
+  };
+
+  const addComment = (photoId: string, text: string) => {
+    if (!text.trim()) return;
+    const guestName = localStorage.getItem('weddingGuestName') || 'Anonymous';
+    const newComment = {
+      id: Date.now().toString(),
+      text,
+      author: guestName,
+      timestamp: new Date().toISOString(),
+    };
+    setComments(prev => ({
+      ...prev,
+      [photoId]: [...(prev[photoId] || []), newComment],
+    }));
+    setNewComment('');
+  };
+
+  const getFilteredPhotos = () => {
+    return photos.filter(photo => {
+      const matchesSearch = !searchQuery || 
+        photo.caption?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        photo.guestName?.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesGuest = !filterGuest || photo.guestName === filterGuest;
+      const matchesDate = !filterDate || photo.uploadedAt.startsWith(filterDate);
+      return matchesSearch && matchesGuest && matchesDate;
+    });
+  };
+
+  const getUniqueGuests = () => {
+    return Array.from(new Set(photos.map(p => p.guestName).filter(Boolean)));
+  };
+
+  const getUniqueDates = () => {
+    return Array.from(new Set(photos.map(p => p.uploadedAt.split('T')[0]))).sort().reverse();
+  };
+
+  const getStorageUsage = () => {
+    const totalBytes = photos.reduce((sum, p) => sum + (p.fileSize || 0), 0);
+    const mb = (totalBytes / (1024 * 1024)).toFixed(2);
+    return mb;
+  };
+
+  const downloadPhoto = (dataUrl: string, filename: string) => {
+    const link = document.createElement('a');
+    link.href = dataUrl;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  // Close lightbox on escape key, navigate with arrows
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') closeLightbox();
+      if (lightboxPhoto !== null) {
+        if (e.key === 'ArrowRight') nextPhoto();
+        if (e.key === 'ArrowLeft') prevPhoto();
+      }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
+  }, [lightboxPhoto]);
 
   if (!isAuthenticated) {
     return (
@@ -98,6 +226,8 @@ export default function Gallery() {
     );
   }
 
+  const filteredPhotos = getFilteredPhotos();
+
   return (
     <main className="min-h-screen bg-[#faf7f2] py-8 px-4">
       <div className="max-w-6xl mx-auto">
@@ -108,7 +238,10 @@ export default function Gallery() {
           </h2>
           <div className="flex items-center gap-3">
             <span className="text-[#6b6b6b] text-sm">
-              {photos.length} photo{photos.length !== 1 ? 's' : ''}
+              {filteredPhotos.length} of {photos.length} photos
+            </span>
+            <span className="text-[#6b6b6b] text-sm">
+              • {getStorageUsage()} MB
             </span>
             <button
               onClick={handleRefresh}
@@ -125,6 +258,62 @@ export default function Gallery() {
               <ImagePlus className="w-4 h-4" />
               Add Photos
             </Link>
+          </div>
+        </div>
+
+        {/* Search and Filters */}
+        <div className="bg-white rounded-xl p-4 shadow-[0_4px_20px_rgba(0,0,0,0.08)] mb-6">
+          <div className="flex flex-wrap gap-4">
+            <input
+              type="text"
+              placeholder="Search photos..."
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              className="flex-1 min-w-[200px] px-4 py-2 border-2 border-[#f5e6d3] rounded-lg text-[#2c2c2c] bg-white focus:outline-none focus:border-[#c9a96e] transition-colors"
+            />
+            <select
+              value={filterGuest}
+              onChange={e => setFilterGuest(e.target.value)}
+              className="px-4 py-2 border-2 border-[#f5e6d3] rounded-lg text-[#2c2c2c] bg-white focus:outline-none focus:border-[#c9a96e] transition-colors"
+            >
+              <option value="">All Guests</option>
+              {getUniqueGuests().map(guest => (
+                <option key={guest} value={guest}>{guest}</option>
+              ))}
+            </select>
+            <select
+              value={filterDate}
+              onChange={e => setFilterDate(e.target.value)}
+              className="px-4 py-2 border-2 border-[#f5e6d3] rounded-lg text-[#2c2c2c] bg-white focus:outline-none focus:border-[#c9a96e] transition-colors"
+            >
+              <option value="">All Dates</option>
+              {getUniqueDates().map(date => (
+                <option key={date} value={date}>{date}</option>
+              ))}
+            </select>
+            <div className="flex items-center gap-2 border-2 border-[#f5e6d3] rounded-lg p-1">
+              <button
+                onClick={() => setLayout('grid')}
+                className={`p-2 rounded-md transition-colors ${layout === 'grid' ? 'bg-[#c9a96e] text-white' : 'text-[#6b6b6b] hover:bg-[#f5e6d3]'}`}
+                title="Grid layout"
+              >
+                <Grid className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() => setLayout('masonry')}
+                className={`p-2 rounded-md transition-colors ${layout === 'masonry' ? 'bg-[#c9a96e] text-white' : 'text-[#6b6b6b] hover:bg-[#f5e6d3]'}`}
+                title="Masonry layout"
+              >
+                <LayoutTemplate className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() => setLayout('timeline')}
+                className={`p-2 rounded-md transition-colors ${layout === 'timeline' ? 'bg-[#c9a96e] text-white' : 'text-[#6b6b6b] hover:bg-[#f5e6d3]'}`}
+                title="Timeline layout"
+              >
+                <Calendar className="w-4 h-4" />
+              </button>
+            </div>
           </div>
         </div>
 
@@ -154,40 +343,162 @@ export default function Gallery() {
         )}
 
         {/* Photo Grid */}
-        {photos.length > 0 && (
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-            {photos.map(photo => (
-              <div
-                key={photo.id}
-                onClick={() => openLightbox(photo)}
-                className="group bg-white rounded-xl overflow-hidden shadow-[0_4px_20px_rgba(0,0,0,0.08)] cursor-pointer transition-transform duration-200 hover:-translate-y-1"
-              >
-                <div className="relative overflow-hidden">
-                  <img
-                    src={photo.dataUrl}
-                    alt={photo.caption || 'Wedding photo'}
-                    loading="lazy"
-                    className="w-full h-56 sm:h-64 object-cover transition-transform duration-300 group-hover:scale-105"
-                  />
-                </div>
-                <div className="p-3">
-                  {photo.caption && (
-                    <p className="text-sm text-[#2c2c2c] mb-1 line-clamp-1">{photo.caption}</p>
-                  )}
-                  <div className="flex items-center justify-between text-xs text-[#6b6b6b]">
-                    <span className="flex items-center gap-1">
-                      <User className="w-3 h-3" />
-                      {photo.guestName || 'Anonymous'}
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <Clock className="w-3 h-3" />
-                      {formatDate(photo.uploadedAt)}
-                    </span>
+        {filteredPhotos.length > 0 && (
+          <>
+            {layout === 'grid' && (
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+                {filteredPhotos.map((photo, index) => (
+                  <div
+                    key={photo.id}
+                    onClick={() => openLightbox(photo, index)}
+                    className="group bg-white rounded-xl overflow-hidden shadow-[0_4px_20px_rgba(0,0,0,0.08)] cursor-pointer transition-all duration-200 hover:-translate-y-1 hover:shadow-lg"
+                  >
+                    <div className="relative overflow-hidden">
+                      <img
+                        src={photo.dataUrl}
+                        alt={photo.caption || 'Wedding photo'}
+                        loading="lazy"
+                        className="w-full h-56 sm:h-64 object-cover transition-transform duration-300 group-hover:scale-105"
+                      />
+                      <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button
+                          onClick={(e) => { e.stopPropagation(); toggleLike(photo.id); }}
+                          className={`p-1.5 rounded-full ${likedPhotos.has(photo.id) ? 'bg-red-500 text-white' : 'bg-white/90 text-[#2c2c2c]'} transition-colors`}
+                        >
+                          <Heart className={`w-4 h-4 ${likedPhotos.has(photo.id) ? 'fill-current' : ''}`} />
+                        </button>
+                      </div>
+                    </div>
+                    <div className="p-3">
+                      {photo.caption && (
+                        <p className="text-sm text-[#2c2c2c] mb-1 line-clamp-1">{photo.caption}</p>
+                      )}
+                      <div className="flex items-center justify-between text-xs text-[#6b6b6b]">
+                        <span className="flex items-center gap-1">
+                          <User className="w-3 h-3" />
+                          {photo.guestName || 'Anonymous'}
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <Clock className="w-3 h-3" />
+                          {formatDate(photo.uploadedAt)}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2 mt-2 text-xs text-[#6b6b6b]">
+                        <span className="flex items-center gap-1">
+                          <Heart className="w-3 h-3" />
+                          {likedPhotos.has(photo.id) ? 1 : 0}
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <MessageCircle className="w-3 h-3" />
+                          {(comments[photo.id] || []).length}
+                        </span>
+                      </div>
+                    </div>
                   </div>
-                </div>
+                ))}
               </div>
-            ))}
-          </div>
+            )}
+
+            {layout === 'masonry' && (
+              <div className="columns-2 sm:columns-3 lg:columns-4 gap-4 space-y-4">
+                {filteredPhotos.map((photo, index) => (
+                  <div
+                    key={photo.id}
+                    onClick={() => openLightbox(photo, index)}
+                    className="group bg-white rounded-xl overflow-hidden shadow-[0_4px_20px_rgba(0,0,0,0.08)] cursor-pointer transition-all duration-200 hover:-translate-y-1 hover:shadow-lg break-inside-avoid"
+                  >
+                    <div className="relative overflow-hidden">
+                      <img
+                        src={photo.dataUrl}
+                        alt={photo.caption || 'Wedding photo'}
+                        loading="lazy"
+                        className="w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                        style={{ maxHeight: '400px' }}
+                      />
+                      <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button
+                          onClick={(e) => { e.stopPropagation(); toggleLike(photo.id); }}
+                          className={`p-1.5 rounded-full ${likedPhotos.has(photo.id) ? 'bg-red-500 text-white' : 'bg-white/90 text-[#2c2c2c]'} transition-colors`}
+                        >
+                          <Heart className={`w-4 h-4 ${likedPhotos.has(photo.id) ? 'fill-current' : ''}`} />
+                        </button>
+                      </div>
+                    </div>
+                    <div className="p-3">
+                      {photo.caption && (
+                        <p className="text-sm text-[#2c2c2c] mb-1 line-clamp-1">{photo.caption}</p>
+                      )}
+                      <div className="flex items-center justify-between text-xs text-[#6b6b6b]">
+                        <span className="flex items-center gap-1">
+                          <User className="w-3 h-3" />
+                          {photo.guestName || 'Anonymous'}
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <Clock className="w-3 h-3" />
+                          {formatDate(photo.uploadedAt)}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {layout === 'timeline' && (
+              <div className="space-y-6">
+                {getUniqueDates().map(date => (
+                  <div key={date}>
+                    <h3 className="text-lg text-[#2c2c2c] mb-4" style={{ fontFamily: 'Georgia, serif' }}>
+                      {date}
+                    </h3>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+                      {filteredPhotos
+                        .filter(photo => photo.uploadedAt.startsWith(date))
+                        .map((photo, index) => (
+                          <div
+                            key={photo.id}
+                            onClick={() => openLightbox(photo, filteredPhotos.indexOf(photo))}
+                            className="group bg-white rounded-xl overflow-hidden shadow-[0_4px_20px_rgba(0,0,0,0.08)] cursor-pointer transition-all duration-200 hover:-translate-y-1 hover:shadow-lg"
+                          >
+                            <div className="relative overflow-hidden">
+                              <img
+                                src={photo.dataUrl}
+                                alt={photo.caption || 'Wedding photo'}
+                                loading="lazy"
+                                className="w-full h-56 sm:h-64 object-cover transition-transform duration-300 group-hover:scale-105"
+                              />
+                              <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); toggleLike(photo.id); }}
+                                  className={`p-1.5 rounded-full ${likedPhotos.has(photo.id) ? 'bg-red-500 text-white' : 'bg-white/90 text-[#2c2c2c]'} transition-colors`}
+                                >
+                                  <Heart className={`w-4 h-4 ${likedPhotos.has(photo.id) ? 'fill-current' : ''}`} />
+                                </button>
+                              </div>
+                            </div>
+                            <div className="p-3">
+                              {photo.caption && (
+                                <p className="text-sm text-[#2c2c2c] mb-1 line-clamp-1">{photo.caption}</p>
+                              )}
+                              <div className="flex items-center justify-between text-xs text-[#6b6b6b]">
+                                <span className="flex items-center gap-1">
+                                  <User className="w-3 h-3" />
+                                  {photo.guestName || 'Anonymous'}
+                                </span>
+                                <span className="flex items-center gap-1">
+                                  <Clock className="w-3 h-3" />
+                                  {formatDate(photo.uploadedAt)}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </>
         )}
       </div>
 
@@ -199,18 +510,65 @@ export default function Gallery() {
         >
           <button
             onClick={closeLightbox}
-            className="absolute top-4 right-4 sm:top-8 sm:right-8 w-10 h-10 flex items-center justify-center text-white hover:text-[#c9a96e] transition-colors"
+            className="absolute top-4 right-4 sm:top-8 sm:right-8 w-10 h-10 flex items-center justify-center text-white hover:text-[#c9a96e] transition-colors z-10"
           >
             <X className="w-8 h-8" />
           </button>
 
+          {/* Navigation buttons */}
+          <button
+            onClick={(e) => { e.stopPropagation(); prevPhoto(); }}
+            className="absolute left-4 sm:left-8 top-1/2 -translate-y-1/2 w-12 h-12 flex items-center justify-center text-white hover:text-[#c9a96e] transition-colors z-10"
+          >
+            <ChevronLeft className="w-8 h-8" />
+          </button>
+          <button
+            onClick={(e) => { e.stopPropagation(); nextPhoto(); }}
+            className="absolute right-4 sm:right-8 top-1/2 -translate-y-1/2 w-12 h-12 flex items-center justify-center text-white hover:text-[#c9a96e] transition-colors z-10"
+          >
+            <ChevronRight className="w-8 h-8" />
+          </button>
+
+          {/* Action buttons */}
+          <div className="absolute top-4 left-4 sm:top-8 sm:left-8 flex gap-2 z-10">
+            <button
+              onClick={(e) => { e.stopPropagation(); downloadPhoto(lightboxPhoto, `wedding-photo-${lightboxIndex}.jpg`); }}
+              className="w-10 h-10 flex items-center justify-center text-white hover:text-[#c9a96e] transition-colors"
+              title="Download photo"
+            >
+              <Download className="w-6 h-6" />
+            </button>
+            <button
+              onClick={(e) => { e.stopPropagation(); setIsSlideshow(!isSlideshow); }}
+              className={`w-10 h-10 flex items-center justify-center transition-colors ${isSlideshow ? 'text-[#c9a96e]' : 'text-white hover:text-[#c9a96e]'}`}
+              title="Toggle slideshow"
+            >
+              <RefreshCw className={`w-6 h-6 ${isSlideshow ? 'animate-spin' : ''}`} />
+            </button>
+            <button
+              onClick={(e) => { e.stopPropagation(); toggleLike(filteredPhotos[lightboxIndex]?.id || ''); }}
+              className={`w-10 h-10 flex items-center justify-center transition-colors ${likedPhotos.has(filteredPhotos[lightboxIndex]?.id || '') ? 'text-red-500' : 'text-white hover:text-red-500'}`}
+              title="Like photo"
+            >
+              <Heart className={`w-6 h-6 ${likedPhotos.has(filteredPhotos[lightboxIndex]?.id || '') ? 'fill-current' : ''}`} />
+            </button>
+            <button
+              onClick={(e) => { e.stopPropagation(); setShowComments(!showComments); }}
+              className={`w-10 h-10 flex items-center justify-center transition-colors ${showComments ? 'text-[#c9a96e]' : 'text-white hover:text-[#c9a96e]'}`}
+              title="Show comments"
+            >
+              <MessageCircle className="w-6 h-6" />
+            </button>
+          </div>
+
           <img
             src={lightboxPhoto}
             alt="Enlarged photo"
-            className="max-w-[90%] max-h-[85vh] object-contain rounded"
+            className="max-w-[90%] max-h-[85vh] object-contain rounded transition-all duration-300"
             onClick={e => e.stopPropagation()}
           />
 
+          {/* Photo info */}
           {(lightboxCaption || lightboxMeta) && (
             <div className="absolute bottom-4 sm:bottom-8 left-1/2 -translate-x-1/2 text-center text-white max-w-xl px-4">
               {lightboxCaption && (
@@ -221,6 +579,47 @@ export default function Gallery() {
               {lightboxMeta && (
                 <p className="text-sm opacity-80">{lightboxMeta}</p>
               )}
+            </div>
+          )}
+
+          {/* Comments panel */}
+          {showComments && (
+            <div
+              onClick={e => e.stopPropagation()}
+              className="absolute bottom-0 left-0 right-0 bg-black/95 p-4 sm:p-6 max-h-[40vh] overflow-y-auto"
+            >
+              <div className="max-w-2xl mx-auto">
+                <h3 className="text-white text-lg mb-4" style={{ fontFamily: 'Georgia, serif' }}>
+                  Comments {(comments[filteredPhotos[lightboxIndex]?.id] || []).length}
+                </h3>
+                <div className="space-y-3 mb-4">
+                  {(comments[filteredPhotos[lightboxIndex]?.id] || []).map((comment: any) => (
+                    <div key={comment.id} className="bg-white/10 rounded-lg p-3">
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-white font-semibold text-sm">{comment.author}</span>
+                        <span className="text-white/60 text-xs">{formatDate(comment.timestamp)}</span>
+                      </div>
+                      <p className="text-white/90 text-sm">{comment.text}</p>
+                    </div>
+                  ))}
+                </div>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    placeholder="Add a comment..."
+                    value={newComment}
+                    onChange={e => setNewComment(e.target.value)}
+                    onKeyDown={e => e.key === 'Enter' && addComment(filteredPhotos[lightboxIndex]?.id || '', newComment)}
+                    className="flex-1 px-4 py-2 bg-white/10 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-[#c9a96e]"
+                  />
+                  <button
+                    onClick={() => addComment(filteredPhotos[lightboxIndex]?.id || '', newComment)}
+                    className="px-4 py-2 bg-[#c9a96e] text-white rounded-lg hover:bg-[#b8995e] transition-colors"
+                  >
+                    Post
+                  </button>
+                </div>
+              </div>
             </div>
           )}
         </div>

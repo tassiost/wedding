@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router';
 import { useApp } from '@/hooks/useAppContext';
 import { UploadCloud, X, User, Loader2 } from 'lucide-react';
 import Toast from '@/components/Toast';
+import imageCompression from 'browser-image-compression';
 
 interface PreviewFile {
   file: File;
@@ -91,9 +92,27 @@ export default function Upload() {
     setUploadProgress(0);
 
     try {
-      const files = previews.map(p => p.file);
+      // Compress images before upload
+      const compressionOptions = {
+        maxSizeMB: 1,
+        maxWidthOrHeight: 1920,
+        useWebWorker: true,
+      };
+
+      const compressedFiles = await Promise.all(
+        previews.map(async (p) => {
+          try {
+            const compressed = await imageCompression(p.file, compressionOptions);
+            return compressed;
+          } catch (error) {
+            console.error('Compression failed for', p.file.name, error);
+            return p.file; // Fallback to original if compression fails
+          }
+        })
+      );
+
       const captions = previews.map(p => p.caption);
-      const count = await addPhotos(files, captions, guestName);
+      const count = await addPhotos(compressedFiles, captions, guestName);
 
       // Clean up preview URLs
       previews.forEach(p => URL.revokeObjectURL(p.preview));
