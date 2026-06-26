@@ -19,7 +19,7 @@
 
 export const BUILT_IN_CONFIG = {
   // Your GitHub Personal Access Token (with 'repo' scope)
-  token: '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',
+  token: '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',
 
   // Your GitHub username (or org name)
   repoOwner: 'tassiost',
