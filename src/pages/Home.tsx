@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { Link } from 'react-router';
 import { useApp } from '@/hooks/useAppContext';
 import { Upload, Image, Calendar, MapPin } from 'lucide-react';
@@ -8,6 +8,7 @@ export default function Home() {
   const { settings, photos } = useApp();
   const [qrDataUrl, setQrDataUrl] = useState('');
   const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
+  const photosLengthRef = useRef(photos.length);
 
   useEffect(() => {
     // Generate QR code pointing to the current URL
@@ -24,13 +25,17 @@ export default function Home() {
 
   // Auto-advance slideshow every 3 seconds
   useEffect(() => {
-    if (photos.length > 0) {
+    photosLengthRef.current = photos.length;
+  }, [photos.length]);
+
+  useEffect(() => {
+    if (photosLengthRef.current > 0) {
       const interval = setInterval(() => {
-        setCurrentPhotoIndex(prev => (prev + 1) % photos.length);
+        setCurrentPhotoIndex(prev => (prev + 1) % photosLengthRef.current);
       }, 3000);
       return () => clearInterval(interval);
     }
-  }, [photos.length]);
+  }, []);
 
   return (
     <main className="min-h-screen bg-[#faf7f2]">
