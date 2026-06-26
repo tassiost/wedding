@@ -20,7 +20,15 @@
       "likedBy": [
         "Anonymous"
       ],
-      "likes": 1
+      "likes": 1,
+      "comments": [
+        {
+          "id": "1782449935051-54q4b1ig5",
+          "text": "Test comment from Playwright",
+          "author": "Anonymous",
+          "timestamp": "2026-06-26T04:58:55.051Z"
+        }
+      ]
     },
     {
       "id": "1782449829955-3vlgdj44m",
@@ -207,5 +215,5 @@
       "fileSize": 95
     }
   ],
-  "lastUpdated": "2026-06-26T04:58:53.992Z"
+  "lastUpdated": "2026-06-26T04:58:55.051Z"
 }
