@@ -25,7 +25,15 @@
       "guestName": "Test Guest",
       "uploadedAt": "2026-06-26T04:51:54.117Z",
       "dataUrl": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABAQMAAAAl21bKAAAAA1BMVEUA/wA0XsCoAAAAAXRSTlN/gFy0ywAAAApJREFUeJxjYAAAAAIAAUivpHEAAAAASUVORK5CYII=",
-      "fileSize": 95
+      "fileSize": 95,
+      "comments": [
+        {
+          "id": "1782449555167-k0oj369sj",
+          "text": "Test comment from Playwright",
+          "author": "Anonymous",
+          "timestamp": "2026-06-26T04:52:35.167Z"
+        }
+      ]
     },
     {
       "id": "1782449396885-vks6gq4p0",
@@ -64,5 +72,5 @@
       "fileSize": 95
     }
   ],
-  "lastUpdated": "2026-06-26T04:52:33.822Z"
+  "lastUpdated": "2026-06-26T04:52:35.167Z"
 }
