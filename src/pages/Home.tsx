@@ -5,8 +5,9 @@ import { Upload, Image, Calendar, MapPin } from 'lucide-react';
 import QRCode from 'qrcode';
 
 export default function Home() {
-  const { settings } = useApp();
+  const { settings, photos } = useApp();
   const [qrDataUrl, setQrDataUrl] = useState('');
+  const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
 
   useEffect(() => {
     // Generate QR code pointing to the current URL
@@ -20,6 +21,16 @@ export default function Home() {
       },
     }).then(setQrDataUrl).catch(console.error);
   }, []);
+
+  // Auto-advance slideshow every 3 seconds
+  useEffect(() => {
+    if (photos.length > 0) {
+      const interval = setInterval(() => {
+        setCurrentPhotoIndex(prev => (prev + 1) % photos.length);
+      }, 3000);
+      return () => clearInterval(interval);
+    }
+  }, [photos.length]);
 
   return (
     <main className="min-h-screen bg-[#faf7f2]">
@@ -40,6 +51,33 @@ export default function Home() {
           {settings.venue}
         </div>
       </div>
+
+      {/* Photo Slideshow */}
+      {photos.length > 0 && (
+        <div className="max-w-2xl mx-auto px-6 mb-8">
+          <div className="bg-white rounded-xl overflow-hidden shadow-[0_4px_20px_rgba(0,0,0,0.08)]">
+            <div className="relative aspect-video bg-black">
+              <img
+                src={photos[currentPhotoIndex]?.dataUrl}
+                alt={photos[currentPhotoIndex]?.caption || 'Wedding photo'}
+                className="w-full h-full object-contain"
+              />
+              {photos[currentPhotoIndex]?.caption && (
+                <div className="absolute bottom-0 left-0 right-0 bg-black/60 text-white p-3 text-center">
+                  <p className="text-sm" style={{ fontFamily: 'Georgia, serif' }}>
+                    {photos[currentPhotoIndex].caption}
+                  </p>
+                </div>
+              )}
+            </div>
+            <div className="p-4 text-center">
+              <p className="text-[#6b6b6b] text-sm">
+                Photo {currentPhotoIndex + 1} of {photos.length}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* QR Code Section */}
       <div className="bg-white rounded-xl p-6 max-w-sm mx-auto text-center shadow-[0_4px_20px_rgba(0,0,0,0.08)] mb-8">
