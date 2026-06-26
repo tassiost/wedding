@@ -13,7 +13,7 @@
 //
 // STEP 1: Fill in the values below
 // STEP 2: Run: npm run build
-// STEP 3: Deploy the dist/ folder to GitHub Pages
+// STEP 3: Deploy the docs/ folder to GitHub Pages
 // ============================================================
 
 export const BUILT_IN_CONFIG = {
