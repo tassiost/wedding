@@ -170,8 +170,12 @@ export default function Gallery() {
 
   const getStorageUsage = () => {
     const totalBytes = photos.reduce((sum, p) => sum + (p.fileSize || 0), 0);
-    const mb = (totalBytes / (1024 * 1024)).toFixed(2);
-    return mb;
+    const mb = totalBytes / (1024 * 1024);
+    if (mb < 1) {
+      const kb = (totalBytes / 1024).toFixed(2);
+      return `${kb} KB`;
+    }
+    return mb.toFixed(2) + ' MB';
   };
 
   const downloadPhoto = (dataUrl: string, filename: string) => {
