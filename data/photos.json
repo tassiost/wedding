@@ -1,13 +1,87 @@
 {
   "photos": [
     {
+      "id": "1782450345635-3o74ory10",
+      "filename": "test.png",
+      "caption": "Test photo caption",
+      "guestName": "Test Guest",
+      "uploadedAt": "2026-06-26T05:05:45.635Z",
+      "dataUrl": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABAQMAAAAl21bKAAAAA1BMVEUA/wA0XsCoAAAAAXRSTlN/gFy0ywAAAApJREFUeJxjYAAAAAIAAUivpHEAAAAASUVORK5CYII=",
+      "fileSize": 95
+    },
+    {
+      "id": "1782450333894-errnctver",
+      "filename": "test.png",
+      "caption": "Test caption",
+      "guestName": "Test Guest",
+      "uploadedAt": "2026-06-26T05:05:33.894Z",
+      "dataUrl": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABAQMAAAAl21bKAAAAA1BMVEUA/wA0XsCoAAAAAXRSTlN/gFy0ywAAAApJREFUeJxjYAAAAAIAAUivpHEAAAAASUVORK5CYII=",
+      "fileSize": 95
+    },
+    {
+      "id": "1782450302073-uu0auxori",
+      "filename": "test.png",
+      "caption": "Test photo caption",
+      "guestName": "Test Guest",
+      "uploadedAt": "2026-06-26T05:05:02.073Z",
+      "dataUrl": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABAQMAAAAl21bKAAAAA1BMVEUA/wA0XsCoAAAAAXRSTlN/gFy0ywAAAApJREFUeJxjYAAAAAIAAUivpHEAAAAASUVORK5CYII=",
+      "fileSize": 95,
+      "likedBy": [
+        "Anonymous"
+      ],
+      "likes": 1
+    },
+    {
+      "id": "1782450290106-7i77k4x1x",
+      "filename": "test.png",
+      "caption": "Test caption",
+      "guestName": "Test Guest",
+      "uploadedAt": "2026-06-26T05:04:50.106Z",
+      "dataUrl": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABAQMAAAAl21bKAAAAA1BMVEUA/wA0XsCoAAAAAXRSTlN/gFy0ywAAAApJREFUeJxjYAAAAAIAAUivpHEAAAAASUVORK5CYII=",
+      "fileSize": 95
+    },
+    {
+      "id": "1782450238556-w5j58gn8e",
+      "filename": "test.png",
+      "caption": "Test caption",
+      "guestName": "Test Guest",
+      "uploadedAt": "2026-06-26T05:03:58.556Z",
+      "dataUrl": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABAQMAAAAl21bKAAAAA1BMVEUA/wA0XsCoAAAAAXRSTlN/gFy0ywAAAApJREFUeJxjYAAAAAIAAUivpHEAAAAASUVORK5CYII=",
+      "fileSize": 95,
+      "likedBy": [
+        "a",
+        "Anonymous"
+      ],
+      "likes": 2,
+      "comments": [
+        {
+          "id": "1782450294529-yky28bxb5",
+          "text": "Test comment from Playwright",
+          "author": "Anonymous",
+          "timestamp": "2026-06-26T05:04:54.529Z"
+        }
+      ]
+    },
+    {
       "id": "1782449937390-xsfwo4gj5",
       "filename": "test.png",
       "caption": "Test photo caption",
       "guestName": "Test Guest",
       "uploadedAt": "2026-06-26T04:58:57.390Z",
       "dataUrl": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABAQMAAAAl21bKAAAAA1BMVEUA/wA0XsCoAAAAAXRSTlN/gFy0ywAAAApJREFUeJxjYAAAAAIAAUivpHEAAAAASUVORK5CYII=",
-      "fileSize": 95
+      "fileSize": 95,
+      "likedBy": [
+        "a"
+      ],
+      "likes": 1,
+      "comments": [
+        {
+          "id": "1782450243244-ziyieozr3",
+          "text": "Test comment from Playwright",
+          "author": "Anonymous",
+          "timestamp": "2026-06-26T05:04:03.244Z"
+        }
+      ]
     },
     {
       "id": "1782449932689-b5x5pvllz",
@@ -212,7 +286,19 @@
       "guestName": "Test Guest",
       "uploadedAt": "2026-06-26T04:49:07.746Z",
       "dataUrl": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABAQMAAAAl21bKAAAAA1BMVEUA/wA0XsCoAAAAAXRSTlN/gFy0ywAAAApJREFUeJxjYAAAAAIAAUivpHEAAAAASUVORK5CYII=",
-      "fileSize": 95
+      "fileSize": 95,
+      "likedBy": [
+        "Anonymous"
+      ],
+      "likes": 1,
+      "comments": [
+        {
+          "id": "1782450343296-74gzjkw6z",
+          "text": "Test comment",
+          "author": "Anonymous",
+          "timestamp": "2026-06-26T05:05:43.296Z"
+        }
+      ]
     },
     {
       "id": "1782449315730-o20pfneow",
@@ -221,8 +307,12 @@
       "guestName": "Test Guest",
       "uploadedAt": "2026-06-26T04:48:35.730Z",
       "dataUrl": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABAQMAAAAl21bKAAAAA1BMVEUA/wA0XsCoAAAAAXRSTlN/gFy0ywAAAApJREFUeJxjYAAAAAIAAUivpHEAAAAASUVORK5CYII=",
-      "fileSize": 95
+      "fileSize": 95,
+      "likedBy": [
+        "Anonymous"
+      ],
+      "likes": 1
     }
   ],
-  "lastUpdated": "2026-06-26T04:58:57.390Z"
+  "lastUpdated": "2026-06-26T05:05:45.636Z"
 }
