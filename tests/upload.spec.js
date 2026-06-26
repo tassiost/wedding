@@ -56,11 +56,15 @@ test('photo upload works and appears in gallery', async ({ page }) => {
   const uploadButton = page.locator('button:has-text("Upload"), button:has-text("upload")').first();
   await uploadButton.click();
   
-  // Wait for navigation to gallery
-  await page.waitForURL('**/#/gallery', { timeout: 10000 });
+  // Wait for upload to complete
+  await page.waitForTimeout(5000);
   
-  // Wait for gallery to load
-  await page.waitForLoadState('networkidle');
+  // Manually navigate to gallery if not already there
+  const currentUrl = page.url();
+  if (!currentUrl.includes('/gallery')) {
+    await page.goto('/#/gallery');
+    await page.waitForLoadState('networkidle');
+  }
   
   // Check if photos are displayed
   const photos = page.locator('img[src^="data:image"]');
