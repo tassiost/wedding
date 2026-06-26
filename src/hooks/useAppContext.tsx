@@ -74,25 +74,19 @@ export function AppProvider({ children }: { children: ReactNode }) {
   // Auto-authenticate with built-in config (works on ALL devices)
   useEffect(() => {
     const hasBuiltInConfig =
-      BUILT_IN_CONFIG.token &&
-      BUILT_IN_CONFIG.token !== '' &&
       BUILT_IN_CONFIG.repoOwner &&
       BUILT_IN_CONFIG.repoName;
 
     if (hasBuiltInConfig) {
       const config: GitHubConfig = {
-        token: BUILT_IN_CONFIG.token,
+        token: '', // Token is now server-side
         repoOwner: BUILT_IN_CONFIG.repoOwner,
         repoName: BUILT_IN_CONFIG.repoName,
         branch: BUILT_IN_CONFIG.branch || 'main',
       };
-      // Verify silently, don't block rendering
-      verifyToken(config).then(valid => {
-        if (valid) {
-          setGithubConfigState(config);
-          setIsAuthenticated(true);
-        }
-      });
+      // Backend handles authentication, so we auto-authenticate
+      setGithubConfigState(config);
+      setIsAuthenticated(true);
     }
   }, []);
 

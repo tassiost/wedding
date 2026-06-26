@@ -1,38 +1,20 @@
 import type { Photo, GitHubConfig } from '@/types';
 
 const PHOTOS_FILE_PATH = 'data/photos.json';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
 interface PhotosData {
   photos: Photo[];
   lastUpdated: string;
 }
 
-function getHeaders(config: GitHubConfig) {
-  return {
-    'Authorization': `token ${config.token}`,
-    'Accept': 'application/vnd.github.v3+json',
-    'Content-Type': 'application/json',
-  };
-}
-
 export async function fetchPhotos(config: GitHubConfig): Promise<Photo[]> {
   try {
-    const response = await fetch(
-      `https://api.github.com/repos/${config.repoOwner}/${config.repoName}/contents/${PHOTOS_FILE_PATH}?ref=${config.branch}`,
-      { headers: getHeaders(config) }
-    );
-
-    if (response.status === 404) {
-      return [];
-    }
-
+    const response = await fetch(`${API_BASE_URL}/api/photos`);
     if (!response.ok) {
       throw new Error(`Failed to fetch photos: ${response.statusText}`);
     }
-
-    const fileData = await response.json();
-    const content = atob(fileData.content.replace(/\n/g, ''));
-    const data: PhotosData = JSON.parse(content);
+    const data: PhotosData = await response.json();
     return data.photos || [];
   } catch (error) {
     console.error('Error fetching photos:', error);
@@ -41,51 +23,8 @@ export async function fetchPhotos(config: GitHubConfig): Promise<Photo[]> {
 }
 
 export async function savePhotos(config: GitHubConfig, photos: Photo[]): Promise<void> {
-  const data: PhotosData = {
-    photos,
-    lastUpdated: new Date().toISOString(),
-  };
-
-  const content = btoa(JSON.stringify(data, null, 2));
-
-  // First, get the current file to obtain the SHA (if it exists)
-  let sha: string | undefined;
-  try {
-    const response = await fetch(
-      `https://api.github.com/repos/${config.repoOwner}/${config.repoName}/contents/${PHOTOS_FILE_PATH}?ref=${config.branch}`,
-      { headers: getHeaders(config) }
-    );
-    if (response.ok) {
-      const fileData = await response.json();
-      sha = fileData.sha;
-    }
-  } catch {
-    // File doesn't exist yet, that's fine
-  }
-
-  const body: Record<string, string> = {
-    message: 'Update wedding photos',
-    content,
-    branch: config.branch,
-  };
-
-  if (sha) {
-    body.sha = sha;
-  }
-
-  const response = await fetch(
-    `https://api.github.com/repos/${config.repoOwner}/${config.repoName}/contents/${PHOTOS_FILE_PATH}`,
-    {
-      method: 'PUT',
-      headers: getHeaders(config),
-      body: JSON.stringify(body),
-    }
-  );
-
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.message || 'Failed to save photos');
-  }
+  // This is now handled by the backend upload endpoint
+  throw new Error('Use uploadPhoto instead');
 }
 
 export async function uploadPhoto(
@@ -97,28 +36,36 @@ export async function uploadPhoto(
   // Convert file to base64 data URL
   const dataUrl = await fileToDataUrl(file);
 
-  const photo: Photo = {
-    id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-    filename: file.name,
-    caption: caption || '',
-    guestName: guestName || 'Anonymous',
-    uploadedAt: new Date().toISOString(),
-    dataUrl,
-    fileSize: file.size,
-  };
+  const response = await fetch(`${API_BASE_URL}/api/photos`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      filename: file.name,
+      caption: caption || '',
+      guestName: guestName || 'Anonymous',
+      dataUrl,
+      fileSize: file.size,
+    }),
+  });
 
-  // Fetch current photos, append new one, and save
-  const photos = await fetchPhotos(config);
-  photos.unshift(photo);
-  await savePhotos(config, photos);
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || 'Failed to upload photo');
+  }
 
-  return photo;
+  return response.json();
 }
 
 export async function deletePhoto(config: GitHubConfig, photoId: string): Promise<void> {
-  const photos = await fetchPhotos(config);
-  const filtered = photos.filter(p => p.id !== photoId);
-  await savePhotos(config, filtered);
+  const response = await fetch(`${API_BASE_URL}/api/photos/${photoId}`, {
+    method: 'DELETE',
+  });
+
+  if (!response.ok) {
+    throw new Error('Failed to delete photo');
+  }
 }
 
 function fileToDataUrl(file: File): Promise<string> {
@@ -131,12 +78,6 @@ function fileToDataUrl(file: File): Promise<string> {
 }
 
 export async function verifyToken(config: GitHubConfig): Promise<boolean> {
-  try {
-    const response = await fetch('https://api.github.com/user', {
-      headers: getHeaders(config),
-    });
-    return response.ok;
-  } catch {
-    return false;
-  }
+  // Backend handles authentication, so we just check if config exists
+  return true;
 }

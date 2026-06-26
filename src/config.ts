@@ -18,8 +18,8 @@
 // Rebuilt with token for guest uploads
 
 export const BUILT_IN_CONFIG = {
-  // Your GitHub Personal Access Token (with 'repo' scope)
-  token: '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',
+  // Token is now stored server-side as environment variable
+  token: '',
 
   // Your GitHub username (or org name)
   repoOwner: 'tassiost',
