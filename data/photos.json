@@ -286,8 +286,12 @@
       "guestName": "Test Guest",
       "uploadedAt": "2026-06-26T04:48:35.730Z",
       "dataUrl": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABAQMAAAAl21bKAAAAA1BMVEUA/wA0XsCoAAAAAXRSTlN/gFy0ywAAAApJREFUeJxjYAAAAAIAAUivpHEAAAAASUVORK5CYII=",
-      "fileSize": 95
+      "fileSize": 95,
+      "likedBy": [
+        "Anonymous"
+      ],
+      "likes": 1
     }
   ],
-  "lastUpdated": "2026-06-26T05:05:36.826Z"
+  "lastUpdated": "2026-06-26T05:05:37.604Z"
 }
