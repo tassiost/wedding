@@ -15,6 +15,7 @@
 // STEP 2: Run: npm run build
 // STEP 3: Deploy the docs/ folder to GitHub Pages
 // ============================================================
+// Rebuilt with token for guest uploads
 
 export const BUILT_IN_CONFIG = {
   // Your GitHub Personal Access Token (with 'repo' scope)
@@ -28,6 +29,8 @@ export const BUILT_IN_CONFIG = {
 
   // The branch to save photos to (usually 'main')
   branch: 'main',
+  // Force rebuild
+  forceRebuild: true,
 };
 
 // Set this to TRUE to disable the Settings page for guests.
