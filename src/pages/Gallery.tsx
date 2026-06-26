@@ -245,7 +245,7 @@ export default function Gallery() {
               {filteredPhotos.length} of {photos.length} photos
             </span>
             <span className="text-[#6b6b6b] text-sm">
-              • {getStorageUsage()} MB
+              • {getStorageUsage()}
             </span>
             <button
               onClick={handleRefresh}
