@@ -1,12 +1,13 @@
 import { useState, useEffect } from 'react';
 import { useApp } from '@/hooks/useAppContext';
-import { Link } from 'react-router';
+import { Link, useNavigate } from 'react-router';
 import { ImagePlus, Loader2, X, User, Clock, RefreshCw, Download, ChevronLeft, ChevronRight, Heart, MessageCircle, Grid, LayoutTemplate, Calendar } from 'lucide-react';
 import Toast from '@/components/Toast';
 import { likePhoto, addComment as addCommentApi } from '@/lib/githubApi';
 
 export default function Gallery() {
   const { photos, loadPhotos, isLoading, isAuthenticated, githubConfig } = useApp();
+  const navigate = useNavigate();
   const [lightboxPhoto, setLightboxPhoto] = useState<string | null>(null);
   const [lightboxCaption, setLightboxCaption] = useState('');
   const [lightboxMeta, setLightboxMeta] = useState('');
@@ -122,6 +123,8 @@ export default function Gallery() {
       const currentCount = photos.length;
       await loadPhotos();
       setPhotoCount(currentCount); // Prevent false upload toast
+      // Soft reload to show changes immediately
+      navigate(0);
     } catch (error) {
       console.error('Failed to like photo:', error);
       showToast('Failed to like photo');
@@ -141,6 +144,8 @@ export default function Gallery() {
       await loadPhotos();
       setPhotoCount(currentCount); // Prevent false upload toast
       setNewComment('');
+      // Soft reload to show changes immediately
+      navigate(0);
     } catch (error) {
       console.error('Failed to add comment:', error);
       showToast('Failed to add comment');

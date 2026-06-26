@@ -122,6 +122,8 @@ export default function Upload() {
 
       setTimeout(() => {
         navigate('/gallery');
+        // Soft reload to ensure latest photos are shown
+        setTimeout(() => navigate(0), 100);
       }, 1500);
     } catch (error) {
       console.error('Upload failed:', error);
