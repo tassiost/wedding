@@ -463,9 +463,9 @@ export default function Gallery() {
                               <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                                 <button
                                   onClick={(e) => { e.stopPropagation(); toggleLike(photo.id); }}
-                                  className={`p-1.5 rounded-full ${likedPhotos.has(photo.id) ? 'bg-red-500 text-white' : 'bg-white/90 text-[#2c2c2c]'} transition-colors`}
+                                  className={`p-1.5 rounded-full ${isLikedByUser(photo) ? 'bg-red-500 text-white' : 'bg-white/90 text-[#2c2c2c]'} transition-colors`}
                                 >
-                                  <Heart className={`w-4 h-4 ${likedPhotos.has(photo.id) ? 'fill-current' : ''}`} />
+                                  <Heart className={`w-4 h-4 ${isLikedByUser(photo) ? 'fill-current' : ''}`} />
                                 </button>
                               </div>
                             </div>

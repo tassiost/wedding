@@ -1,6 +1,24 @@
 import { test, expect } from '@playwright/test';
 
-test('photo upload works', async ({ page }) => {
+test('photo upload works and appears in gallery', async ({ page }) => {
+  // Listen for console errors
+  const errors = [];
+  page.on('console', msg => {
+    if (msg.type() === 'error') {
+      errors.push(msg.text());
+    }
+  });
+
+  // First, test if we can access the gallery directly
+  await page.goto('/#/gallery');
+  await page.waitForLoadState('networkidle');
+  
+  // Check for console errors on gallery load
+  await page.waitForTimeout(2000);
+  
+  console.log('Console errors on gallery load:', errors);
+  
+  // Now test upload
   await page.goto('/#/upload');
   
   // Wait for page to load
@@ -38,13 +56,21 @@ test('photo upload works', async ({ page }) => {
   const uploadButton = page.locator('button:has-text("Upload"), button:has-text("upload")').first();
   await uploadButton.click();
   
-  // Wait for upload to complete
-  await page.waitForTimeout(5000);
+  // Wait for navigation to gallery
+  await page.waitForURL('**/#/gallery', { timeout: 10000 });
   
-  // Check current state
-  const currentUrl = page.url();
-  console.log('Current URL after upload:', currentUrl);
+  // Wait for gallery to load
+  await page.waitForLoadState('networkidle');
   
-  // Take screenshot for debugging
-  await page.screenshot({ path: 'upload-test.png' });
+  // Check if photos are displayed
+  const photos = page.locator('img[src^="data:image"]');
+  const photoCount = await photos.count();
+  console.log('Photo count in gallery:', photoCount);
+  
+  // Check for console errors
+  if (errors.length > 0) {
+    console.error('Console errors found:', errors);
+  }
+  
+  console.log('Test completed. Photo count:', photoCount, 'Errors:', errors.length);
 });
