@@ -1,6 +1,15 @@
 {
   "photos": [
     {
+      "id": "1782449605222-vwbxt2t64",
+      "filename": "test1.png",
+      "caption": "",
+      "guestName": "Multi Upload Test",
+      "uploadedAt": "2026-06-26T04:53:25.222Z",
+      "dataUrl": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABAQMAAAAl21bKAAAAA1BMVEUA/wA0XsCoAAAAAXRSTlN/gFy0ywAAAApJREFUeJxjYAAAAAIAAUivpHEAAAAASUVORK5CYII=",
+      "fileSize": 95
+    },
+    {
       "id": "1782449559136-5l4ul38ir",
       "filename": "test.png",
       "caption": "Test photo caption",
@@ -81,5 +90,5 @@
       "fileSize": 95
     }
   ],
-  "lastUpdated": "2026-06-26T04:52:39.136Z"
+  "lastUpdated": "2026-06-26T04:53:25.222Z"
 }
