@@ -150,16 +150,22 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setUploadProgress(0);
     try {
       const newPhotos: Photo[] = [];
+      const failedFiles: string[] = [];
 
       for (let i = 0; i < files.length; i++) {
-        const file = files[i];
-        const photo = await uploadPhoto(githubConfig, file, captions[i] || '', guestName || 'Anonymous');
-        newPhotos.push(photo);
+        try {
+          const file = files[i];
+          const photo = await uploadPhoto(githubConfig, file, captions[i] || '', guestName || 'Anonymous');
+          newPhotos.push(photo);
+        } catch (error) {
+          console.error(`Failed to upload ${files[i].name}:`, error);
+          failedFiles.push(files[i].name);
+        }
         setUploadProgress(Math.round(((i + 1) / files.length) * 100));
       }
 
       setPhotos(prev => [...newPhotos, ...prev]);
-      return newPhotos.length;
+      return { successCount: newPhotos.length, failedFiles };
     } finally {
       setIsLoading(false);
       setUploadProgress(0);

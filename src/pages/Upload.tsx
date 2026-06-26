@@ -112,13 +112,17 @@ export default function Upload() {
       );
 
       const captions = previews.map(p => p.caption);
-      const count = await addPhotos(compressedFiles, captions, guestName);
+      const result = await addPhotos(compressedFiles, captions, guestName);
 
       // Clean up preview URLs
       previews.forEach(p => URL.revokeObjectURL(p.preview));
       setPreviews([]);
 
-      showToast(`Uploaded ${count} photo${count !== 1 ? 's' : ''}!`);
+      if (result.failedFiles.length > 0) {
+        showToast(`Uploaded ${result.successCount} photo${result.successCount !== 1 ? 's' : ''}. Failed: ${result.failedFiles.join(', ')}`);
+      } else {
+        showToast(`Uploaded ${result.successCount} photo${result.successCount !== 1 ? 's' : ''}!`);
+      }
 
       setTimeout(() => {
         navigate('/gallery');
