@@ -53,7 +53,7 @@ export default function Gallery() {
       showToast(`${diff} new photo${diff !== 1 ? 's' : ''} uploaded!`);
     }
     setPhotoCount(photos.length);
-  }, [photos.length]);
+  }, [photos.length, photoCount]);
 
   // Slideshow auto-advance
   useEffect(() => {
@@ -118,7 +118,10 @@ export default function Gallery() {
     try {
       const guestName = localStorage.getItem('weddingGuestName') || 'Anonymous';
       await likePhoto(githubConfig, photoId, guestName);
-      await loadPhotos(); // Reload to get updated likes
+      // Reload photos without triggering upload toast
+      const currentCount = photos.length;
+      await loadPhotos();
+      setPhotoCount(currentCount); // Prevent false upload toast
     } catch (error) {
       console.error('Failed to like photo:', error);
       showToast('Failed to like photo');
@@ -133,7 +136,10 @@ export default function Gallery() {
     try {
       const guestName = localStorage.getItem('weddingGuestName') || 'Anonymous';
       await addCommentApi(githubConfig, photoId, text, guestName);
-      await loadPhotos(); // Reload to get updated comments
+      // Reload photos without triggering upload toast
+      const currentCount = photos.length;
+      await loadPhotos();
+      setPhotoCount(currentCount); // Prevent false upload toast
       setNewComment('');
     } catch (error) {
       console.error('Failed to add comment:', error);
