@@ -66,9 +66,10 @@
       "dataUrl": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABAQMAAAAl21bKAAAAA1BMVEUA/wA0XsCoAAAAAXRSTlN/gFy0ywAAAApJREFUeJxjYAAAAAIAAUivpHEAAAAASUVORK5CYII=",
       "fileSize": 95,
       "likedBy": [
-        "Anonymous"
+        "Anonymous",
+        "a"
       ],
-      "likes": 1,
+      "likes": 2,
       "comments": [
         {
           "id": "1782449607297-8fcuo0e8t",
@@ -150,5 +151,5 @@
       "fileSize": 95
     }
   ],
-  "lastUpdated": "2026-06-26T04:55:15.910Z"
+  "lastUpdated": "2026-06-26T04:55:17.366Z"
 }
