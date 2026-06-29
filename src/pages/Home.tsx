@@ -10,6 +10,10 @@ export default function Home() {
   const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
   const photosLengthRef = useRef(photos.length);
 
+  const getPhotoUrl = (photo: any) => {
+    return photo.r2Url || photo.dataUrl || '';
+  };
+
   useEffect(() => {
     // Generate QR code pointing to the current URL
     const currentUrl = window.location.origin + window.location.pathname.replace(/\/?$/, '/');
@@ -63,7 +67,7 @@ export default function Home() {
           <div className="bg-white rounded-xl overflow-hidden shadow-[0_4px_20px_rgba(0,0,0,0.08)]">
             <div className="relative aspect-video bg-black">
               <img
-                src={photos[currentPhotoIndex]?.dataUrl}
+                src={getPhotoUrl(photos[currentPhotoIndex])}
                 alt={photos[currentPhotoIndex]?.caption || 'Wedding photo'}
                 className="w-full h-full object-contain"
               />

@@ -74,7 +74,7 @@ export default function Gallery() {
   };
 
   const openLightbox = (photo: typeof photos[0], index: number) => {
-    setLightboxPhoto(photo.dataUrl);
+    setLightboxPhoto(getPhotoUrl(photo));
     setLightboxCaption(photo.caption);
     setLightboxMeta(`By ${photo.guestName || 'Anonymous'} • ${formatDate(photo.uploadedAt)}`);
     setLightboxIndex(index);
@@ -96,7 +96,7 @@ export default function Gallery() {
     if (filtered.length === 0) return;
     const nextIndex = (lightboxIndex + 1) % filtered.length;
     const photo = filtered[nextIndex];
-    setLightboxPhoto(photo.dataUrl);
+    setLightboxPhoto(getPhotoUrl(photo));
     setLightboxCaption(photo.caption);
     setLightboxMeta(`By ${photo.guestName || 'Anonymous'} • ${formatDate(photo.uploadedAt)}`);
     setLightboxIndex(nextIndex);
@@ -107,7 +107,7 @@ export default function Gallery() {
     if (filtered.length === 0) return;
     const prevIndex = (lightboxIndex - 1 + filtered.length) % filtered.length;
     const photo = filtered[prevIndex];
-    setLightboxPhoto(photo.dataUrl);
+    setLightboxPhoto(getPhotoUrl(photo));
     setLightboxCaption(photo.caption);
     setLightboxMeta(`By ${photo.guestName || 'Anonymous'} • ${formatDate(photo.uploadedAt)}`);
     setLightboxIndex(prevIndex);
@@ -177,6 +177,10 @@ export default function Gallery() {
       return `${kb} KB`;
     }
     return mb.toFixed(2) + ' MB';
+  };
+
+  const getPhotoUrl = (photo: Photo) => {
+    return photo.r2Url || photo.dataUrl || '';
   };
 
   const downloadPhoto = (dataUrl: string, filename: string) => {
@@ -359,7 +363,7 @@ export default function Gallery() {
                   >
                     <div className="relative overflow-hidden">
                       <img
-                        src={photo.dataUrl}
+                        src={getPhotoUrl(photo)}
                         alt={photo.caption || 'Wedding photo'}
                         loading="lazy"
                         className="w-full h-56 sm:h-64 object-cover transition-transform duration-300 group-hover:scale-105"
@@ -413,7 +417,7 @@ export default function Gallery() {
                   >
                     <div className="relative overflow-hidden">
                       <img
-                        src={photo.dataUrl}
+                        src={getPhotoUrl(photo)}
                         alt={photo.caption || 'Wedding photo'}
                         loading="lazy"
                         className="w-full object-cover transition-transform duration-300 group-hover:scale-105"
@@ -466,7 +470,7 @@ export default function Gallery() {
                           >
                             <div className="relative overflow-hidden">
                               <img
-                                src={photo.dataUrl}
+                                src={getPhotoUrl(photo)}
                                 alt={photo.caption || 'Wedding photo'}
                                 loading="lazy"
                                 className="w-full h-56 sm:h-64 object-cover transition-transform duration-300 group-hover:scale-105"

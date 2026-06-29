@@ -11,7 +11,9 @@ export interface Photo {
   caption: string;
   guestName: string;
   uploadedAt: string;
-  dataUrl: string;
+  dataUrl?: string; // Legacy support for old photos
+  r2Url?: string; // New R2 URL
+  r2Key?: string; // R2 object key for deletion
   fileSize: number;
   likes: number;
   likedBy: string[]; // Array of guest names who liked
