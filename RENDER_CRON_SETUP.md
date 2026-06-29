@@ -1,29 +1,22 @@
-# Render Cron Job Setup for Keep-Alive
+# Keep-Alive Setup for Render Backend
 
-To keep the backend awake, set up a Render Cron Job:
+To keep the backend awake and prevent cold starts, use a free external cron service:
 
-## Option 1: Use Render Cron Job Service
+## Using cron-job.org (Free)
 
-1. Go to Render Dashboard
-2. Click "New +" → "Cron Job"
-3. Name: `wedding-backend-keep-alive`
-4. Command: `curl -f https://wedding-backend-6g10.onrender.com/health`
-5. Schedule: `*/10 * * * *` (every 10 minutes)
-6. Click "Create Cron Job"
-
-## Option 2: Use External Service
-
-Use a free service like cron-job.org:
 1. Go to https://cron-job.org
-2. Create account
-3. Add new cron job:
-   - URL: https://wedding-backend-6g10.onrender.com/health
+2. Create a free account
+3. Click "Create new cron job"
+4. Configure:
+   - Title: `wedding-backend-keep-alive`
+   - URL: `https://wedding-backend-6g10.onrender.com/health`
    - Schedule: Every 10 minutes
-4. Save
+   - Save
+5. The cron job will ping the health endpoint every 10 minutes to keep the backend awake
 
 ## Health Endpoint
 
-The backend now has a `/health` endpoint that returns:
+The backend has a `/health` endpoint that returns:
 ```json
 {
   "status": "ok",
@@ -31,4 +24,4 @@ The backend now has a `/health` endpoint that returns:
 }
 ```
 
-This keeps the backend awake and prevents cold starts during uploads.
+This prevents the backend from going to sleep and eliminates cold start delays during uploads.
