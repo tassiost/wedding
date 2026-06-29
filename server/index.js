@@ -54,6 +54,8 @@ app.post('/api/photos', async (req, res) => {
   try {
     const { filename, caption, guestName, dataUrl, fileSize } = req.body;
 
+    console.log('Upload request:', { filename, fileSize, dataUrlLength: dataUrl?.length });
+
     // Fetch current photos
     let currentPhotos = [];
     try {
@@ -66,8 +68,12 @@ app.post('/api/photos', async (req, res) => {
         const content = Buffer.from(fileData.content, 'base64').toString('utf-8');
         const data = JSON.parse(content);
         currentPhotos = data.photos || [];
+        console.log('Fetched current photos:', currentPhotos.length);
+      } else {
+        console.log('GitHub API response status:', response.status, response.statusText);
       }
-    } catch {
+    } catch (error) {
+      console.log('Error fetching current photos:', error.message);
       // File doesn't exist yet
     }
 
@@ -92,6 +98,7 @@ app.post('/api/photos', async (req, res) => {
     };
 
     const content = Buffer.from(JSON.stringify(data, null, 2)).toString('base64');
+    console.log('Content size:', content.length, 'bytes');
 
     // Get current file SHA if it exists
     let sha;
@@ -103,8 +110,10 @@ app.post('/api/photos', async (req, res) => {
       if (response.ok) {
         const fileData = await response.json();
         sha = fileData.sha;
+        console.log('Current file SHA:', sha);
       }
-    } catch {
+    } catch (error) {
+      console.log('Error getting SHA:', error.message);
       // File doesn't exist
     }
 
@@ -118,6 +127,7 @@ app.post('/api/photos', async (req, res) => {
       body.sha = sha;
     }
 
+    console.log('Sending to GitHub API...');
     const putResponse = await fetch(
       `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${PHOTOS_FILE_PATH}`,
       {
@@ -127,15 +137,18 @@ app.post('/api/photos', async (req, res) => {
       }
     );
 
+    console.log('GitHub API response status:', putResponse.status);
+
     if (!putResponse.ok) {
       const error = await putResponse.json();
+      console.error('GitHub API error:', error);
       throw new Error(error.message || 'Failed to save photo');
     }
 
     res.json(newPhoto);
   } catch (error) {
     console.error('Error uploading photo:', error);
-    res.status(500).json({ error: 'Failed to upload photo' });
+    res.status(500).json({ error: 'Failed to upload photo', details: error.message });
   }
 });
 
