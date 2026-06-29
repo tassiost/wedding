@@ -9,6 +9,7 @@ interface PreviewFile {
   file: File;
   preview: string;
   caption: string;
+  status?: 'pending' | 'success' | 'failed';
 }
 
 export default function Upload() {
@@ -55,6 +56,7 @@ export default function Upload() {
       file,
       preview: URL.createObjectURL(file),
       caption: '',
+      status: 'pending' as const,
     }));
     setPreviews(prev => [...prev, ...newPreviews]);
   };
@@ -118,19 +120,27 @@ export default function Upload() {
 
       setUploadProgress(100);
 
-      // Clean up preview URLs
-      previews.forEach(p => URL.revokeObjectURL(p.preview));
-      setPreviews([]);
+      // Update status of photos based on result
+      const updatedPreviews = previews.map((preview, index) => {
+        const fileName = preview.file.name;
+        if (result.failedFiles.includes(fileName)) {
+          return { ...preview, status: 'failed' as const };
+        } else {
+          return { ...preview, status: 'success' as const };
+        }
+      });
+
+      setPreviews(updatedPreviews);
 
       if (result.failedFiles.length > 0) {
-        showToast(`Uploaded ${result.successCount} photo${result.successCount !== 1 ? 's' : ''}. Failed: ${result.failedFiles.join(', ')}`);
+        showToast(`${result.successCount} uploaded, ${result.failedFiles.length} failed. Retry failed photos.`);
       } else {
         showToast(`Uploaded ${result.successCount} photo${result.successCount !== 1 ? 's' : ''}!`);
+        // Only redirect if all succeeded
+        setTimeout(() => {
+          navigate('/gallery', { state: { refresh: true } });
+        }, 1500);
       }
-
-      setTimeout(() => {
-        navigate('/gallery', { state: { refresh: true } });
-      }, 1500);
     } catch (error) {
       console.error('Upload failed:', error);
       showToast('Upload failed. Please try again.');
@@ -138,6 +148,76 @@ export default function Upload() {
       setIsUploading(false);
       setUploadProgress(0);
     }
+  };
+
+  const handleRetryFailed = async () => {
+    const failedPreviews = previews.filter(p => p.status === 'failed');
+    if (failedPreviews.length === 0) return;
+
+    setIsUploading(true);
+    setUploadProgress(0);
+
+    try {
+      const compressionOptions = {
+        maxSizeMB: 1,
+        maxWidthOrHeight: 1920,
+        useWebWorker: true,
+      };
+
+      setUploadProgress(10);
+      const compressedFiles = await Promise.all(
+        failedPreviews.map(async (p) => {
+          try {
+            const compressed = await imageCompression(p.file, compressionOptions);
+            return compressed;
+          } catch (error) {
+            console.error('Compression failed for', p.file.name, error);
+            return p.file;
+          }
+        })
+      );
+
+      setUploadProgress(30);
+      const captions = failedPreviews.map(p => p.caption);
+      const result = await addPhotos(compressedFiles, captions, guestName);
+
+      setUploadProgress(100);
+
+      // Update status
+      const updatedPreviews = previews.map(preview => {
+        const fileName = preview.file.name;
+        if (result.failedFiles.includes(fileName)) {
+          return { ...preview, status: 'failed' as const };
+        } else if (preview.status === 'failed') {
+          return { ...preview, status: 'success' as const };
+        }
+        return preview;
+      });
+
+      setPreviews(updatedPreviews);
+
+      if (result.failedFiles.length > 0) {
+        showToast(`${result.successCount} retried successfully, ${result.failedFiles.length} still failed.`);
+      } else {
+        showToast('All failed photos uploaded successfully!');
+        // Clean up successful photos
+        const remainingPreviews = updatedPreviews.filter(p => p.status !== 'success');
+        remainingPreviews.forEach(p => URL.revokeObjectURL(p.preview));
+        setPreviews(remainingPreviews);
+      }
+    } catch (error) {
+      console.error('Retry failed:', error);
+      showToast('Retry failed. Please try again.');
+    } finally {
+      setIsUploading(false);
+      setUploadProgress(0);
+    }
+  };
+
+  const clearSuccessful = () => {
+    const successfulPreviews = previews.filter(p => p.status === 'success');
+    successfulPreviews.forEach(p => URL.revokeObjectURL(p.preview));
+    setPreviews(previews.filter(p => p.status !== 'success'));
   };
 
   if (!isAuthenticated) {
@@ -231,13 +311,26 @@ export default function Upload() {
             {previews.map((preview, index) => (
               <div
                 key={index}
-                className="relative bg-white rounded-xl overflow-hidden shadow-[0_4px_20px_rgba(0,0,0,0.08)]"
+                className={`relative bg-white rounded-xl overflow-hidden shadow-[0_4px_20px_rgba(0,0,0,0.08)] ${
+                  preview.status === 'failed' ? 'ring-2 ring-red-500' : ''
+                } ${preview.status === 'success' ? 'ring-2 ring-green-500' : ''
+                }`}
               >
                 <img
                   src={preview.preview}
                   alt={`Preview ${index + 1}`}
                   className="w-full h-32 object-cover"
                 />
+                {preview.status === 'failed' && (
+                  <div className="absolute top-2 left-2 bg-red-500 text-white text-xs px-2 py-1 rounded-full">
+                    Failed
+                  </div>
+                )}
+                {preview.status === 'success' && (
+                  <div className="absolute top-2 left-2 bg-green-500 text-white text-xs px-2 py-1 rounded-full">
+                    Uploaded
+                  </div>
+                )}
                 <input
                   type="text"
                   value={preview.caption}
@@ -259,7 +352,7 @@ export default function Upload() {
 
         {/* Upload Button */}
         {previews.length > 0 && (
-          <div className="text-center">
+          <div className="text-center space-y-3">
             <button
               onClick={handleUpload}
               disabled={isUploading}
@@ -273,10 +366,39 @@ export default function Upload() {
               ) : (
                 <>
                   <UploadCloud className="w-5 h-5" />
-                  Upload {previews.length} Photo{previews.length !== 1 ? 's' : ''}
+                  Upload {previews.filter(p => p.status !== 'success').length} Photo{previews.filter(p => p.status !== 'success').length !== 1 ? 's' : ''}
                 </>
               )}
             </button>
+
+            {/* Retry and Clear buttons for failed/successful uploads */}
+            {previews.some(p => p.status === 'failed') && (
+              <div className="flex justify-center gap-3">
+                <button
+                  onClick={handleRetryFailed}
+                  disabled={isUploading}
+                  className="inline-flex items-center gap-2 px-6 py-2.5 rounded-full font-semibold text-white bg-red-500 hover:bg-red-600 transition-all duration-200 disabled:opacity-50"
+                >
+                  {isUploading ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Retrying...
+                    </>
+                  ) : (
+                    <>
+                      Retry Failed ({previews.filter(p => p.status === 'failed').length})
+                    </>
+                  )}
+                </button>
+                <button
+                  onClick={clearSuccessful}
+                  disabled={isUploading}
+                  className="inline-flex items-center gap-2 px-6 py-2.5 rounded-full font-semibold text-[#2c2c2c] bg-white border-2 border-[#f5e6d3] hover:border-[#c9a96e] transition-all duration-200 disabled:opacity-50"
+                >
+                  Clear Uploaded ({previews.filter(p => p.status === 'success').length})
+                </button>
+              </div>
+            )}
           </div>
         )}
       </div>
