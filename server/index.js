@@ -253,32 +253,78 @@ app.post('/api/photos', async (req, res) => {
     const content = Buffer.from(JSON.stringify(data, null, 2)).toString('base64');
     console.log('Content size:', content.length, 'bytes');
 
-    const body = {
-      message: 'Upload wedding photo',
-      content,
-      branch: BRANCH,
-    };
+    // Retry logic for SHA mismatch (409 error)
+    const maxRetries = 3;
+    let uploadSuccess = false;
 
-    if (sha) {
-      body.sha = sha;
+    for (let attempt = 0; attempt < maxRetries; attempt++) {
+      const body = {
+        message: 'Upload wedding photo',
+        content,
+        branch: BRANCH,
+      };
+
+      if (sha) {
+        body.sha = sha;
+      }
+
+      console.log('Sending to GitHub API...');
+      const putResponse = await fetch(
+        `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${PHOTOS_FILE_PATH}`,
+        {
+          method: 'PUT',
+          headers: getHeaders(),
+          body: JSON.stringify(body),
+        }
+      );
+
+      console.log('GitHub API response status:', putResponse.status);
+
+      if (putResponse.ok) {
+        uploadSuccess = true;
+        break;
+      }
+
+      const error = await putResponse.json();
+      console.error(`GitHub API error (attempt ${attempt + 1}):`, error);
+
+      // If 409 error (SHA mismatch), refetch current SHA and retry
+      if (putResponse.status === 409 && attempt < maxRetries - 1) {
+        console.log('SHA mismatch, refetching current photos...');
+        await new Promise(resolve => setTimeout(resolve, 500)); // Wait before retry
+
+        const refetchResponse = await fetch(
+          `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${PHOTOS_FILE_PATH}?ref=${BRANCH}`,
+          { headers: getHeaders() }
+        );
+
+        if (refetchResponse.ok) {
+          const refetchData = await refetchResponse.json();
+          sha = refetchData.sha;
+          const refetchContent = Buffer.from(refetchData.content, 'base64').toString('utf-8');
+          const refetchDataParsed = JSON.parse(refetchContent);
+          currentPhotos = refetchDataParsed.photos || [];
+          // Rebuild updated photos with current state
+          const updatedPhotosRetry = [newPhoto, ...currentPhotos];
+          const dataRetry = {
+            photos: updatedPhotosRetry,
+            lastUpdated: new Date().toISOString(),
+          };
+          // Update content for retry
+          const contentRetry = Buffer.from(JSON.stringify(dataRetry, null, 2)).toString('base64');
+          // Replace content variable for next attempt
+          const tempContent = content;
+          Object.assign(body, { content: contentRetry, sha });
+          continue;
+        }
+      }
+
+      // If not 409 or last attempt, throw error
+      throw new Error(error.message || 'Failed to save photo metadata');
     }
 
-    console.log('Sending to GitHub API...');
-    const putResponse = await fetch(
-      `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${PHOTOS_FILE_PATH}`,
-      {
-        method: 'PUT',
-        headers: getHeaders(),
-        body: JSON.stringify(body),
-      }
-    );
-
-    console.log('GitHub API response status:', putResponse.status);
-
-    if (!putResponse.ok) {
-      const error = await putResponse.json();
-      console.error('GitHub API error:', error);
-      throw new Error(error.message || 'Failed to save photo metadata');
+    if (!uploadSuccess) {
+      throw new Error('Failed to upload photo after retries');
     }
 
     // Update R2 usage
