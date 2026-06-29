@@ -198,8 +198,8 @@ app.post('/api/photos', async (req, res) => {
     await s3Client.send(putCommand);
     console.log('Uploaded to R2 successfully');
 
-    // Generate R2 URL
-    const r2Url = `${R2_PUBLIC_URL}/${R2_BUCKET_NAME}/${key}`;
+    // Generate R2 URL (public URL already includes bucket path)
+    const r2Url = `${R2_PUBLIC_URL}/${key}`;
 
     // Fetch current photos and SHA
     let currentPhotos = [];
