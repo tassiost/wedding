@@ -114,14 +114,6 @@ Set up cron job at https://cron-job.org:
 - Masonry view: Pinterest-style layout
 - Timeline view: Organized by date
 
-### Deleting Photos
-1. Open photo in lightbox
-2. Click trash icon
-3. Confirm deletion
-- Removes from R2 storage
-- Updates GitHub metadata
-- Decreases usage tracking
-
 ### Social Features
 - **Like**: Click heart icon on any photo
 - **Comment**: Click message icon to add comments
