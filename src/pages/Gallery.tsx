@@ -183,9 +183,9 @@ export default function Gallery() {
     return photo.r2Url || photo.dataUrl || '';
   };
 
-  const downloadPhoto = (dataUrl: string, filename: string) => {
+  const downloadPhoto = (photo: Photo, filename: string) => {
     const link = document.createElement('a');
-    link.href = dataUrl;
+    link.href = getPhotoUrl(photo);
     link.download = filename;
     document.body.appendChild(link);
     link.click();
@@ -540,7 +540,7 @@ export default function Gallery() {
           {/* Action buttons */}
           <div className="absolute top-4 left-4 sm:top-8 sm:left-8 flex gap-2 z-10">
             <button
-              onClick={(e) => { e.stopPropagation(); downloadPhoto(lightboxPhoto, `wedding-photo-${lightboxIndex}.jpg`); }}
+              onClick={(e) => { e.stopPropagation(); downloadPhoto(filteredPhotos[lightboxIndex], `wedding-photo-${lightboxIndex}.jpg`); }}
               className="w-10 h-10 flex items-center justify-center text-white hover:text-[#c9a96e] transition-colors"
               title="Download photo"
             >
