@@ -56,8 +56,9 @@ app.post('/api/photos', async (req, res) => {
 
     console.log('Upload request:', { filename, fileSize, dataUrlLength: dataUrl?.length });
 
-    // Fetch current photos
+    // Fetch current photos and SHA in one request
     let currentPhotos = [];
+    let sha;
     try {
       const response = await fetch(
         `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${PHOTOS_FILE_PATH}?ref=${BRANCH}`,
@@ -65,10 +66,11 @@ app.post('/api/photos', async (req, res) => {
       );
       if (response.ok) {
         const fileData = await response.json();
+        sha = fileData.sha;
         const content = Buffer.from(fileData.content, 'base64').toString('utf-8');
         const data = JSON.parse(content);
         currentPhotos = data.photos || [];
-        console.log('Fetched current photos:', currentPhotos.length);
+        console.log('Fetched current photos:', currentPhotos.length, 'SHA:', sha);
       } else {
         console.log('GitHub API response status:', response.status, response.statusText);
       }
@@ -99,23 +101,6 @@ app.post('/api/photos', async (req, res) => {
 
     const content = Buffer.from(JSON.stringify(data, null, 2)).toString('base64');
     console.log('Content size:', content.length, 'bytes');
-
-    // Get current file SHA if it exists
-    let sha;
-    try {
-      const response = await fetch(
-        `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${PHOTOS_FILE_PATH}?ref=${BRANCH}`,
-        { headers: getHeaders() }
-      );
-      if (response.ok) {
-        const fileData = await response.json();
-        sha = fileData.sha;
-        console.log('Current file SHA:', sha);
-      }
-    } catch (error) {
-      console.log('Error getting SHA:', error.message);
-      // File doesn't exist
-    }
 
     const body = {
       message: 'Upload wedding photo',
