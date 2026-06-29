@@ -71,12 +71,18 @@ app.post('/api/photos', async (req, res) => {
         const data = JSON.parse(content);
         currentPhotos = data.photos || [];
         console.log('Fetched current photos:', currentPhotos.length, 'SHA:', sha);
+      } else if (response.status === 404) {
+        console.log('File does not exist yet, creating new file');
       } else {
-        console.log('GitHub API response status:', response.status, response.statusText);
+        console.error('GitHub API error:', response.status, response.statusText);
+        throw new Error(`GitHub API returned ${response.status}: ${response.statusText}`);
       }
     } catch (error) {
-      console.log('Error fetching current photos:', error.message);
-      // File doesn't exist yet
+      console.error('Error fetching current photos:', error.message);
+      // Only proceed if file doesn't exist (404)
+      if (!error.message.includes('404')) {
+        throw error;
+      }
     }
 
     // Create new photo
