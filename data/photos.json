@@ -1,6 +1,16 @@
 {
   "photos": [
     {
+      "id": "1782773557358-5uymbkenh",
+      "filename": "WhatsApp Image 2026-06-22 at 20.45.33 (1).jpeg",
+      "caption": "",
+      "guestName": "Anonymous",
+      "uploadedAt": "2026-06-29T22:52:37.358Z",
+      "r2Url": "https://pub-bb9444735bc44da9934152376e2dc0de.r2.dev/1782773556831-xyjfd1edn-WhatsApp Image 2026-06-22 at 20.45.33 (1).jpeg",
+      "r2Key": "1782773556831-xyjfd1edn-WhatsApp Image 2026-06-22 at 20.45.33 (1).jpeg",
+      "fileSize": 394242
+    },
+    {
       "id": "1782773553954-3wbdu04s2",
       "filename": "WhatsApp Image 2026-06-22 at 20.45.33 (2).jpeg",
       "caption": "",
@@ -364,5 +374,5 @@
       "likes": 1
     }
   ],
-  "lastUpdated": "2026-06-29T22:52:33.954Z"
+  "lastUpdated": "2026-06-29T22:52:37.358Z"
 }
