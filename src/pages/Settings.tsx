@@ -307,9 +307,9 @@ export default function Settings() {
         <div className="bg-white rounded-xl p-6 shadow-[0_4px_20px_rgba(0,0,0,0.08)]">
           <h3 className="text-sm font-semibold text-[#2c2c2c] mb-2">About Storage</h3>
           <p className="text-xs text-[#6b6b6b] leading-relaxed">
-            Photos are stored as base64 data in a JSON file (<code className="bg-[#faf7f2] px-1 py-0.5 rounded">data/photos.json</code>) in your GitHub repo. 
-            This keeps everything in one place with full version history. Each photo is typically 1-3MB when base64 encoded. 
-            GitHub has a 100MB file limit and 1GB repo soft limit. For large galleries, consider downloading and archiving periodically.
+            Photos are stored in Cloudflare R2 (10GB free tier) with metadata in GitHub (<code className="bg-[#faf7f2] px-1 py-0.5 rounded">data/photos.json</code>).
+            This provides fast, reliable storage with automatic usage tracking. Each photo is compressed before upload to save space.
+            R2 has a 10GB storage limit with 1M Class A and 10M Class B operations per month.
           </p>
         </div>
       </div>

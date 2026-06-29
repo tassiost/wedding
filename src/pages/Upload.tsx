@@ -41,12 +41,12 @@ export default function Upload() {
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     setIsDragging(false);
-    const files = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('image/'));
+    const files = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('image/') || f.type.startsWith('video/'));
     addPreviews(files);
   }, []);
 
   const handleFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files || []).filter(f => f.type.startsWith('image/'));
+    const files = Array.from(e.target.files || []).filter(f => f.type.startsWith('image/') || f.type.startsWith('video/'));
     addPreviews(files);
     e.target.value = '';
   }, []);
@@ -97,7 +97,7 @@ export default function Upload() {
     setPreviews(prev => prev.map(p => ({ ...p, status: 'pending' as const })));
 
     try {
-      // Compress images before upload
+      // Compress images before upload (skip videos)
       const compressionOptions = {
         maxSizeMB: 1,
         maxWidthOrHeight: 1920,
@@ -107,6 +107,10 @@ export default function Upload() {
       setUploadProgress(10);
       const compressedFiles = await Promise.all(
         previews.map(async (p) => {
+          // Skip compression for videos
+          if (p.file.type.startsWith('video/')) {
+            return p.file;
+          }
           try {
             const compressed = await imageCompression(p.file, compressionOptions);
             return compressed;
@@ -172,6 +176,10 @@ export default function Upload() {
       setUploadProgress(10);
       const compressedFiles = await Promise.all(
         failedPreviews.map(async (p) => {
+          // Skip compression for videos
+          if (p.file.type.startsWith('video/')) {
+            return p.file;
+          }
           try {
             const compressed = await imageCompression(p.file, compressionOptions);
             return compressed;
@@ -283,16 +291,16 @@ export default function Upload() {
         >
           <UploadCloud className="w-12 h-12 text-[#c9a96e] mx-auto mb-3" />
           <h3 className="text-lg text-[#2c2c2c] mb-1" style={{ fontFamily: 'Georgia, serif' }}>
-            Drop photos here
+            Drop photos or videos here
           </h3>
           <p className="text-[#6b6b6b] text-sm">
-            or click to browse (up to 20 images, 10MB each)
+            or click to browse (up to 20 files, 10MB each)
           </p>
           <input
             ref={fileInputRef}
             type="file"
             multiple
-            accept="image/*"
+            accept="image/*,video/*"
             onChange={handleFileSelect}
             className="hidden"
           />

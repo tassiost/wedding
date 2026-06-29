@@ -5,14 +5,16 @@ A modern wedding photo sharing application with Cloudflare R2 storage, real-time
 ## Features
 
 - **Photo Upload**: Upload wedding photos with captions and guest names
+- **Video Upload**: Upload wedding videos with captions and guest names
 - **Cloudflare R2 Storage**: 10GB free storage with automatic usage tracking
-- **Real-time Gallery**: View photos in grid, masonry, or timeline layouts
+- **Real-time Gallery**: View photos and videos in grid, masonry, or timeline layouts
 - **Social Features**: Like photos and add comments
-- **Slideshow**: Auto-advancing photo slideshow on home page
+- **Slideshow**: Auto-advancing photo slideshow on home page with fullscreen mode
 - **QR Code**: Share wedding URL via QR code
 - **Mobile Responsive**: Optimized for mobile devices
-- **Retry Logic**: Automatic retry for failed uploads
+- **Retry Logic**: Automatic retry for failed uploads with individual photo status
 - **Keep-Alive**: Cron job to prevent backend cold starts
+- **Upload Progress**: Real-time progress bar and status indicators
 
 ## Architecture
 
@@ -30,7 +32,7 @@ A modern wedding photo sharing application with Cloudflare R2 storage, real-time
 - AWS S3 SDK for R2 compatibility
 
 ### Storage
-- **Photos**: Cloudflare R2 (S3-compatible object storage)
+- **Photos & Videos**: Cloudflare R2 (S3-compatible object storage)
 - **Metadata**: GitHub (photos.json, r2-usage.json)
 - **Free Tier Limits**: 10GB storage, 1M Class A operations, 10M Class B operations
 

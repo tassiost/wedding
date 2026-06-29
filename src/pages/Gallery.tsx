@@ -193,13 +193,28 @@ export default function Gallery() {
     return photo.r2Url || photo.dataUrl || '';
   };
 
-  const downloadPhoto = (photo: Photo, filename: string) => {
-    const link = document.createElement('a');
-    link.href = getPhotoUrl(photo);
-    link.download = filename;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+  const isVideo = (photo: Photo) => {
+    return photo.r2Url?.endsWith('.mp4') || photo.r2Url?.endsWith('.mov') || photo.r2Url?.endsWith('.webm') ||
+           photo.dataUrl?.startsWith('data:video');
+  };
+
+  const downloadPhoto = async (photo: Photo, filename: string) => {
+    const url = getPhotoUrl(photo);
+    try {
+      const response = await fetch(url);
+      const blob = await response.blob();
+      const blobUrl = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(blobUrl);
+    } catch (error) {
+      console.error('Download failed:', error);
+      showToast('Download failed. Please try again.');
+    }
   };
 
   const isLikedByUser = (photo: typeof photos[0]) => {
@@ -372,12 +387,22 @@ export default function Gallery() {
                     className="group bg-white rounded-xl overflow-hidden shadow-[0_4px_20px_rgba(0,0,0,0.08)] cursor-pointer transition-all duration-200 hover:-translate-y-1 hover:shadow-lg"
                   >
                     <div className="relative overflow-hidden">
-                      <img
-                        src={getPhotoUrl(photo)}
-                        alt={photo.caption || 'Wedding photo'}
-                        loading="lazy"
-                        className="w-full h-56 sm:h-64 object-cover transition-transform duration-300 group-hover:scale-105"
-                      />
+                      {isVideo(photo) ? (
+                        <video
+                          src={getPhotoUrl(photo)}
+                          alt={photo.caption || 'Wedding video'}
+                          className="w-full h-56 sm:h-64 object-cover transition-transform duration-300 group-hover:scale-105"
+                          muted
+                          playsInline
+                        />
+                      ) : (
+                        <img
+                          src={getPhotoUrl(photo)}
+                          alt={photo.caption || 'Wedding photo'}
+                          loading="lazy"
+                          className="w-full h-56 sm:h-64 object-cover transition-transform duration-300 group-hover:scale-105"
+                        />
+                      )}
                       <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                         <button
                           onClick={(e) => { e.stopPropagation(); toggleLike(photo.id); }}
@@ -426,13 +451,24 @@ export default function Gallery() {
                     className="group bg-white rounded-xl overflow-hidden shadow-[0_4px_20px_rgba(0,0,0,0.08)] cursor-pointer transition-all duration-200 hover:-translate-y-1 hover:shadow-lg break-inside-avoid"
                   >
                     <div className="relative overflow-hidden">
-                      <img
-                        src={getPhotoUrl(photo)}
-                        alt={photo.caption || 'Wedding photo'}
-                        loading="lazy"
-                        className="w-full object-cover transition-transform duration-300 group-hover:scale-105"
-                        style={{ maxHeight: '400px' }}
-                      />
+                      {isVideo(photo) ? (
+                        <video
+                          src={getPhotoUrl(photo)}
+                          alt={photo.caption || 'Wedding video'}
+                          className="w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                          style={{ maxHeight: '400px' }}
+                          muted
+                          playsInline
+                        />
+                      ) : (
+                        <img
+                          src={getPhotoUrl(photo)}
+                          alt={photo.caption || 'Wedding photo'}
+                          loading="lazy"
+                          className="w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                          style={{ maxHeight: '400px' }}
+                        />
+                      )}
                       <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                         <button
                           onClick={(e) => { e.stopPropagation(); toggleLike(photo.id); }}
@@ -479,12 +515,22 @@ export default function Gallery() {
                             className="group bg-white rounded-xl overflow-hidden shadow-[0_4px_20px_rgba(0,0,0,0.08)] cursor-pointer transition-all duration-200 hover:-translate-y-1 hover:shadow-lg"
                           >
                             <div className="relative overflow-hidden">
-                              <img
-                                src={getPhotoUrl(photo)}
-                                alt={photo.caption || 'Wedding photo'}
-                                loading="lazy"
-                                className="w-full h-56 sm:h-64 object-cover transition-transform duration-300 group-hover:scale-105"
-                              />
+                              {isVideo(photo) ? (
+                                <video
+                                  src={getPhotoUrl(photo)}
+                                  alt={photo.caption || 'Wedding video'}
+                                  className="w-full h-56 sm:h-64 object-cover transition-transform duration-300 group-hover:scale-105"
+                                  muted
+                                  playsInline
+                                />
+                              ) : (
+                                <img
+                                  src={getPhotoUrl(photo)}
+                                  alt={photo.caption || 'Wedding photo'}
+                                  loading="lazy"
+                                  className="w-full h-56 sm:h-64 object-cover transition-transform duration-300 group-hover:scale-105"
+                                />
+                              )}
                               <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                                 <button
                                   onClick={(e) => { e.stopPropagation(); toggleLike(photo.id); }}
@@ -579,12 +625,23 @@ export default function Gallery() {
             </button>
           </div>
 
-          <img
-            src={lightboxPhoto}
-            alt="Enlarged photo"
-            className="max-w-[90%] max-h-[85vh] object-contain rounded transition-all duration-300"
-            onClick={e => e.stopPropagation()}
-          />
+          {isVideo(filteredPhotos[lightboxIndex]) ? (
+            <video
+              src={lightboxPhoto}
+              alt="Enlarged video"
+              className="max-w-[90%] max-h-[85vh] object-contain rounded transition-all duration-300"
+              onClick={e => e.stopPropagation()}
+              controls
+              autoPlay
+            />
+          ) : (
+            <img
+              src={lightboxPhoto}
+              alt="Enlarged photo"
+              className="max-w-[90%] max-h-[85vh] object-contain rounded transition-all duration-300"
+              onClick={e => e.stopPropagation()}
+            />
+          )}
 
           {/* Photo info */}
           {(lightboxCaption || lightboxMeta) && (
