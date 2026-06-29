@@ -36,26 +36,46 @@ export async function uploadPhoto(
   // Convert file to base64 data URL
   const dataUrl = await fileToDataUrl(file);
 
-  const response = await fetch(`${API_BASE_URL}/api/photos`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      filename: file.name,
-      caption: caption || '',
-      guestName: guestName || 'Anonymous',
-      dataUrl,
-      fileSize: file.size,
-    }),
-  });
+  const maxRetries = 3;
+  const baseDelay = 1000; // 1 second
 
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.error || 'Failed to upload photo');
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/photos`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          filename: file.name,
+          caption: caption || '',
+          guestName: guestName || 'Anonymous',
+          dataUrl,
+          fileSize: file.size,
+        }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to upload photo');
+      }
+
+      return response.json();
+    } catch (error) {
+      console.error(`Upload attempt ${attempt + 1} failed:`, error);
+
+      if (attempt === maxRetries - 1) {
+        throw error;
+      }
+
+      // Exponential backoff: 1s, 2s, 4s
+      const delay = baseDelay * Math.pow(2, attempt);
+      console.log(`Retrying upload in ${delay}ms...`);
+      await new Promise(resolve => setTimeout(resolve, delay));
+    }
   }
 
-  return response.json();
+  throw new Error('Failed to upload photo after retries');
 }
 
 export async function deletePhoto(config: GitHubConfig, photoId: string): Promise<void> {

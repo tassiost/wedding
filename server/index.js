@@ -49,6 +49,11 @@ function getHeaders() {
   };
 }
 
+// Health check endpoint for keep-alive
+app.get('/health', (req, res) => {
+  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
 // R2 Usage Tracking
 async function getR2Usage() {
   try {
