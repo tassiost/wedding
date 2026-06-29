@@ -10,12 +10,14 @@ export default function App() {
   return (
     <AppProvider>
       <Navigation />
-      <Routes>
-        <Route path="/" element={<Home />} />
-        <Route path="/upload" element={<Upload />} />
-        <Route path="/gallery" element={<Gallery />} />
-        <Route path="/settings" element={<Settings />} />
-      </Routes>
+      <main className="pt-16">
+        <Routes>
+          <Route path="/" element={<Home />} />
+          <Route path="/upload" element={<Upload />} />
+          <Route path="/gallery" element={<Gallery />} />
+          <Route path="/settings" element={<Settings />} />
+        </Routes>
+      </main>
     </AppProvider>
   );
 }
