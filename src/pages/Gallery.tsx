@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useApp } from '@/hooks/useAppContext';
 import { Link, useNavigate } from 'react-router';
-import { ImagePlus, Loader2, X, User, Clock, RefreshCw, Download, ChevronLeft, ChevronRight, Heart, MessageCircle, Grid, LayoutTemplate, Calendar } from 'lucide-react';
+import { ImagePlus, Loader2, X, User, Clock, RefreshCw, Download, ChevronLeft, ChevronRight, Heart, MessageCircle, Grid, LayoutTemplate, Calendar, Trash2 } from 'lucide-react';
 import Toast from '@/components/Toast';
 import { likePhoto, addComment as addCommentApi } from '@/lib/githubApi';
 
 export default function Gallery() {
-  const { photos, loadPhotos, isLoading, isAuthenticated, githubConfig } = useApp();
+  const { photos, loadPhotos, isLoading, isAuthenticated, githubConfig, removePhoto } = useApp();
   const navigate = useNavigate();
   const [lightboxPhoto, setLightboxPhoto] = useState<string | null>(null);
   const [lightboxCaption, setLightboxCaption] = useState('');
@@ -167,6 +167,18 @@ export default function Gallery() {
 
   const getUniqueDates = () => {
     return Array.from(new Set(photos.map(p => p.uploadedAt.split('T')[0]))).sort().reverse();
+  };
+
+  const handleDelete = async (photoId: string) => {
+    if (!confirm('Are you sure you want to delete this photo?')) return;
+    try {
+      await removePhoto(photoId);
+      showToast('Photo deleted successfully');
+      closeLightbox();
+    } catch (error) {
+      console.error('Failed to delete photo:', error);
+      showToast('Failed to delete photo');
+    }
   };
 
   const getStorageUsage = () => {
@@ -559,6 +571,13 @@ export default function Gallery() {
               title="Like photo"
             >
               <Heart className={`w-6 h-6 ${isLikedByUser(filteredPhotos[lightboxIndex]) ? 'fill-current' : ''}`} />
+            </button>
+            <button
+              onClick={(e) => { e.stopPropagation(); handleDelete(filteredPhotos[lightboxIndex]?.id || ''); }}
+              className="w-10 h-10 flex items-center justify-center text-white hover:text-red-500 transition-colors"
+              title="Delete photo"
+            >
+              <Trash2 className="w-6 h-6" />
             </button>
             <button
               onClick={(e) => { e.stopPropagation(); setShowComments(!showComments); }}
