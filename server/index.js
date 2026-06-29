@@ -21,6 +21,7 @@ const R2_ACCOUNT_ID = process.env.R2_ACCOUNT_ID || 'cddd528ef49c820d4fd4a106f2d6
 const R2_ACCESS_KEY_ID = process.env.R2_ACCESS_KEY_ID || 'f16e1b0f3480c4e919b6d97475a689eb';
 const R2_SECRET_ACCESS_KEY = process.env.R2_SECRET_ACCESS_KEY || '6fc3303918de7e8d4c4063f4f3527805bfdf0098aeef85d7647cb13e24a3fd1f';
 const R2_BUCKET_NAME = process.env.R2_BUCKET_NAME || 'wedding';
+const R2_PUBLIC_URL = process.env.R2_PUBLIC_URL || 'https://pub-bb9444735bc44da9934152376e2dc0de.r2.dev';
 
 // R2 Limits (Free Tier)
 const R2_LIMITS = {
@@ -193,7 +194,7 @@ app.post('/api/photos', async (req, res) => {
     console.log('Uploaded to R2 successfully');
 
     // Generate R2 URL
-    const r2Url = `https://pub-${R2_ACCOUNT_ID}.r2.dev/${R2_BUCKET_NAME}/${key}`;
+    const r2Url = `${R2_PUBLIC_URL}/${R2_BUCKET_NAME}/${key}`;
 
     // Fetch current photos and SHA
     let currentPhotos = [];
