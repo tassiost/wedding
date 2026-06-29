@@ -144,7 +144,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   }, [githubConfig]);
 
-  const addPhotos = useCallback(async (files: File[], captions: string[], guestName: string) => {
+  const addPhotos = useCallback(async (
+    files: File[],
+    captions: string[],
+    guestName: string,
+    onPhotoProgress?: (fileName: string, status: 'success' | 'failed') => void
+  ) => {
     if (!githubConfig) throw new Error('Not authenticated');
     setIsLoading(true);
     setUploadProgress(0);
@@ -157,9 +162,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
           const file = files[i];
           const photo = await uploadPhoto(githubConfig, file, captions[i] || '', guestName || 'Anonymous');
           newPhotos.push(photo);
+          if (onPhotoProgress) {
+            onPhotoProgress(file.name, 'success');
+          }
         } catch (error) {
           console.error(`Failed to upload ${files[i].name}:`, error);
           failedFiles.push(files[i].name);
+          if (onPhotoProgress) {
+            onPhotoProgress(files[i].name, 'failed');
+          }
         }
         setUploadProgress(Math.round(((i + 1) / files.length) * 100));
       }

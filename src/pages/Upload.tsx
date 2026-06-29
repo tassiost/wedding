@@ -93,6 +93,9 @@ export default function Upload() {
     setIsUploading(true);
     setUploadProgress(0);
 
+    // Reset all to pending
+    setPreviews(prev => prev.map(p => ({ ...p, status: 'pending' as const })));
+
     try {
       // Compress images before upload
       const compressionOptions = {
@@ -116,21 +119,20 @@ export default function Upload() {
 
       setUploadProgress(30);
       const captions = previews.map(p => p.caption);
-      const result = await addPhotos(compressedFiles, captions, guestName);
+
+      // Callback to update individual photo status
+      const onPhotoProgress = (fileName: string, status: 'success' | 'failed') => {
+        setPreviews(prev => prev.map(p => {
+          if (p.file.name === fileName) {
+            return { ...p, status };
+          }
+          return p;
+        }));
+      };
+
+      const result = await addPhotos(compressedFiles, captions, guestName, onPhotoProgress);
 
       setUploadProgress(100);
-
-      // Update status of photos based on result
-      const updatedPreviews = previews.map((preview, index) => {
-        const fileName = preview.file.name;
-        if (result.failedFiles.includes(fileName)) {
-          return { ...preview, status: 'failed' as const };
-        } else {
-          return { ...preview, status: 'success' as const };
-        }
-      });
-
-      setPreviews(updatedPreviews);
 
       if (result.failedFiles.length > 0) {
         showToast(`${result.successCount} uploaded, ${result.failedFiles.length} failed. Retry failed photos.`);
@@ -157,6 +159,9 @@ export default function Upload() {
     setIsUploading(true);
     setUploadProgress(0);
 
+    // Reset failed to pending
+    setPreviews(prev => prev.map(p => p.status === 'failed' ? { ...p, status: 'pending' as const } : p));
+
     try {
       const compressionOptions = {
         maxSizeMB: 1,
@@ -179,29 +184,27 @@ export default function Upload() {
 
       setUploadProgress(30);
       const captions = failedPreviews.map(p => p.caption);
-      const result = await addPhotos(compressedFiles, captions, guestName);
+
+      // Callback to update individual photo status
+      const onPhotoProgress = (fileName: string, status: 'success' | 'failed') => {
+        setPreviews(prev => prev.map(p => {
+          if (p.file.name === fileName) {
+            return { ...p, status };
+          }
+          return p;
+        }));
+      };
+
+      const result = await addPhotos(compressedFiles, captions, guestName, onPhotoProgress);
 
       setUploadProgress(100);
-
-      // Update status
-      const updatedPreviews = previews.map(preview => {
-        const fileName = preview.file.name;
-        if (result.failedFiles.includes(fileName)) {
-          return { ...preview, status: 'failed' as const };
-        } else if (preview.status === 'failed') {
-          return { ...preview, status: 'success' as const };
-        }
-        return preview;
-      });
-
-      setPreviews(updatedPreviews);
 
       if (result.failedFiles.length > 0) {
         showToast(`${result.successCount} retried successfully, ${result.failedFiles.length} still failed.`);
       } else {
         showToast('All failed photos uploaded successfully!');
         // Clean up successful photos
-        const remainingPreviews = updatedPreviews.filter(p => p.status !== 'success');
+        const remainingPreviews = previews.filter(p => p.status !== 'success');
         remainingPreviews.forEach(p => URL.revokeObjectURL(p.preview));
         setPreviews(remainingPreviews);
       }
