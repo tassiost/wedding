@@ -1,6 +1,16 @@
 {
   "photos": [
     {
+      "id": "1782768308004-mf1wqt22p",
+      "filename": "1000032712.jpg",
+      "caption": "",
+      "guestName": "Anonymous",
+      "uploadedAt": "2026-06-29T21:25:08.004Z",
+      "r2Url": "https://pub-cddd528ef49c820d4fd4a106f2d67e00.r2.dev/wedding/1782768306690-zhu62uqo0-1000032712.jpg",
+      "r2Key": "1782768306690-zhu62uqo0-1000032712.jpg",
+      "fileSize": 546790
+    },
+    {
       "id": "1782766510370-u6r10yihj",
       "filename": "1000032711.jpg",
       "caption": "",
@@ -10,5 +20,5 @@
       "fileSize": 732130
     }
   ],
-  "lastUpdated": "2026-06-29T20:55:10.370Z"
+  "lastUpdated": "2026-06-29T21:25:08.004Z"
 }
