@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useApp } from '@/hooks/useAppContext';
-import { Link, useNavigate } from 'react-router';
+import { Link, useNavigate, useLocation } from 'react-router';
 import { ImagePlus, Loader2, X, User, Clock, RefreshCw, Download, ChevronLeft, ChevronRight, Heart, MessageCircle, Grid, LayoutTemplate, Calendar } from 'lucide-react';
 import Toast from '@/components/Toast';
 import { likePhoto, addComment as addCommentApi } from '@/lib/githubApi';
@@ -8,6 +8,7 @@ import { likePhoto, addComment as addCommentApi } from '@/lib/githubApi';
 export default function Gallery() {
   const { photos, loadPhotos, isLoading, isAuthenticated, githubConfig } = useApp();
   const navigate = useNavigate();
+  const location = useLocation();
   const [lightboxPhoto, setLightboxPhoto] = useState<string | null>(null);
   const [lightboxCaption, setLightboxCaption] = useState('');
   const [lightboxMeta, setLightboxMeta] = useState('');
@@ -35,6 +36,15 @@ export default function Gallery() {
       loadPhotos();
     }
   }, [isAuthenticated]);
+
+  // Refresh photos when coming from upload page
+  useEffect(() => {
+    if (location.state?.refresh && isAuthenticated) {
+      loadPhotos();
+      // Clear the state to prevent infinite refreshes
+      navigate(location.pathname, { replace: true, state: {} });
+    }
+  }, [location.state, isAuthenticated, navigate, location.pathname]);
 
   // Poll for new photos every 10 seconds
   useEffect(() => {

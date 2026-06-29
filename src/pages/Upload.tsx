@@ -125,7 +125,7 @@ export default function Upload() {
       }
 
       setTimeout(() => {
-        navigate('/gallery');
+        navigate('/gallery', { state: { refresh: true } });
       }, 1500);
     } catch (error) {
       console.error('Upload failed:', error);
