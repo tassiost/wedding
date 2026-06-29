@@ -74,12 +74,12 @@ test.describe('Comprehensive Button and Error Tests', () => {
     await page.waitForTimeout(2000);
 
     // Open lightbox
-    const firstPhoto = page.locator('img[src^="data:image"]').first();
+    const firstPhoto = page.locator('img[src^="data:image"], img[src^="https://"]').first();
     await firstPhoto.click();
     await page.waitForTimeout(1000);
 
     // Test navigation buttons - skip if only one photo
-    const allPhotos = page.locator('img[src^="data:image"]');
+    const allPhotos = page.locator('img[src^="data:image"], img[src^="https://"]');
     const photoCount = await allPhotos.count();
     
     if (photoCount > 1) {
@@ -273,8 +273,8 @@ test.describe('Comprehensive Button and Error Tests', () => {
     await page.waitForLoadState('networkidle');
     await page.waitForTimeout(2000);
 
-    // Get all photos
-    const photos = page.locator('img[src^="data:image"]');
+    // Get all photos (support both data:image and R2 URLs)
+    const photos = page.locator('img[src^="data:image"], img[src^="https://"]');
     const photoCount = await photos.count();
     console.log('Photo count:', photoCount);
 
