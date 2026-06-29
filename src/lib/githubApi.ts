@@ -31,7 +31,8 @@ export async function uploadPhoto(
   config: GitHubConfig,
   file: File,
   caption: string,
-  guestName: string
+  guestName: string,
+  onProgress?: (progress: number) => void
 ): Promise<Photo> {
   // Convert file to base64 data URL
   const dataUrl = await fileToDataUrl(file);

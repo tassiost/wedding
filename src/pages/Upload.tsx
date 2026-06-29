@@ -99,6 +99,7 @@ export default function Upload() {
         useWebWorker: true,
       };
 
+      setUploadProgress(10);
       const compressedFiles = await Promise.all(
         previews.map(async (p) => {
           try {
@@ -111,8 +112,11 @@ export default function Upload() {
         })
       );
 
+      setUploadProgress(30);
       const captions = previews.map(p => p.caption);
       const result = await addPhotos(compressedFiles, captions, guestName);
+
+      setUploadProgress(100);
 
       // Clean up preview URLs
       previews.forEach(p => URL.revokeObjectURL(p.preview));

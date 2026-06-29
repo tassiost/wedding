@@ -1,14 +1,16 @@
 import { useEffect, useState, useRef } from 'react';
 import { Link } from 'react-router';
 import { useApp } from '@/hooks/useAppContext';
-import { Upload, Image, Calendar, MapPin } from 'lucide-react';
+import { Upload, Image, Calendar, MapPin, Maximize, Minimize } from 'lucide-react';
 import QRCode from 'qrcode';
 
 export default function Home() {
   const { settings, photos } = useApp();
   const [qrDataUrl, setQrDataUrl] = useState('');
   const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
+  const [isFullscreen, setIsFullscreen] = useState(false);
   const photosLengthRef = useRef(photos.length);
+  const slideshowRef = useRef<HTMLDivElement>(null);
 
   const getPhotoUrl = (photo: any) => {
     return photo.r2Url || photo.dataUrl || '';
@@ -41,6 +43,27 @@ export default function Home() {
     }
   }, []);
 
+  const toggleFullscreen = () => {
+    if (!slideshowRef.current) return;
+
+    if (!isFullscreen) {
+      slideshowRef.current.requestFullscreen();
+      setIsFullscreen(true);
+    } else {
+      document.exitFullscreen();
+      setIsFullscreen(false);
+    }
+  };
+
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(!!document.fullscreenElement);
+    };
+
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
+  }, []);
+
   return (
     <main className="min-h-screen bg-[#faf7f2]">
       {/* Hero Section */}
@@ -64,7 +87,7 @@ export default function Home() {
       {/* Photo Slideshow */}
       {photos.length > 0 && (
         <div className="max-w-2xl mx-auto px-6 mb-8">
-          <div className="bg-white rounded-xl overflow-hidden shadow-[0_4px_20px_rgba(0,0,0,0.08)]">
+          <div ref={slideshowRef} className="bg-white rounded-xl overflow-hidden shadow-[0_4px_20px_rgba(0,0,0,0.08)]">
             <div className="relative aspect-video bg-black">
               <img
                 src={getPhotoUrl(photos[currentPhotoIndex])}
@@ -78,6 +101,13 @@ export default function Home() {
                   </p>
                 </div>
               )}
+              <button
+                onClick={toggleFullscreen}
+                className="absolute top-3 right-3 w-8 h-8 rounded-full bg-black/50 text-white flex items-center justify-center hover:bg-black/70 transition-colors"
+                title={isFullscreen ? 'Exit fullscreen' : 'Fullscreen'}
+              >
+                {isFullscreen ? <Minimize className="w-4 h-4" /> : <Maximize className="w-4 h-4" />}
+              </button>
             </div>
             <div className="p-4 text-center">
               <p className="text-[#6b6b6b] text-sm">
