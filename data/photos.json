@@ -1,6 +1,16 @@
 {
   "photos": [
     {
+      "id": "1782770008587-03hwh5n7n",
+      "filename": "test.png",
+      "caption": "Test caption",
+      "guestName": "Test Guest",
+      "uploadedAt": "2026-06-29T21:53:28.587Z",
+      "r2Url": "https://pub-bb9444735bc44da9934152376e2dc0de.r2.dev/wedding/1782770007386-w37okq4kg-test.png",
+      "r2Key": "1782770007386-w37okq4kg-test.png",
+      "fileSize": 95
+    },
+    {
       "id": "1782768308004-mf1wqt22p",
       "filename": "1000032712.jpg",
       "caption": "",
@@ -20,5 +30,5 @@
       "fileSize": 732130
     }
   ],
-  "lastUpdated": "2026-06-29T21:25:08.004Z"
+  "lastUpdated": "2026-06-29T21:53:28.587Z"
 }
