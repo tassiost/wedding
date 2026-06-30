@@ -25,21 +25,134 @@ waiting for event "download"
 # Page snapshot
 
 ```yaml
-- main [ref=e2]:
-  - generic [ref=e3]:
+- generic [ref=e2]:
+  - navigation [ref=e3]:
     - generic [ref=e4]:
-      - heading "Error 401" [level=1] [ref=e5]
-      - heading "This bucket cannot be viewed" [level=3] [ref=e6]
-    - generic [ref=e7]:
-      - paragraph [ref=e8]: You are not authorized to view this bucket
-      - paragraph [ref=e9]: This bucket does not exist or is not publicly accessible at this URL. Check the URL of the bucket that you’re looking for or contact the owner to enable Public access.
-    - generic [ref=e10]:
-      - paragraph [ref=e11]: Is this your bucket?
-      - paragraph [ref=e12]:
-        - text: Learn how to enable
-        - link "Public Access" [ref=e13] [cursor=pointer]:
-          - /url: https://developers.cloudflare.com/r2/data-access/public-buckets/
-  - img [ref=e15]
+      - link "Vivi's Wedding" [ref=e5] [cursor=pointer]:
+        - /url: "#/"
+        - img [ref=e6]
+        - text: Vivi's Wedding
+      - list [ref=e9]:
+        - listitem [ref=e10]:
+          - link "Home" [ref=e11] [cursor=pointer]:
+            - /url: "#/"
+            - img [ref=e12]
+            - generic [ref=e15]: Home
+        - listitem [ref=e16]:
+          - link "Upload" [ref=e17] [cursor=pointer]:
+            - /url: "#/upload"
+            - img [ref=e18]
+            - generic [ref=e21]: Upload
+        - listitem [ref=e22]:
+          - link "Gallery" [ref=e23] [cursor=pointer]:
+            - /url: "#/gallery"
+            - img [ref=e24]
+            - generic [ref=e28]: Gallery
+  - main [ref=e29]:
+    - generic [ref=e30]:
+      - generic [ref=e31]:
+        - heading "Guest Gallery" [level=2] [ref=e32]
+        - generic [ref=e33]:
+          - generic [ref=e34]: 3 of 3 photos
+          - generic [ref=e35]: • 0.20 KB
+          - button "Refresh gallery" [ref=e36] [cursor=pointer]:
+            - img [ref=e37]
+          - link "Add Photos" [ref=e42] [cursor=pointer]:
+            - /url: "#/upload"
+            - img [ref=e43]
+            - text: Add Photos
+      - generic [ref=e48]:
+        - textbox "Search photos..." [ref=e49]
+        - combobox [ref=e50]:
+          - option "All Guests" [selected]
+          - option "Video Test"
+          - option "Multi Upload Test"
+        - combobox [ref=e51]:
+          - option "All Dates" [selected]
+          - option "2026-06-30"
+        - generic [ref=e52]:
+          - button "Grid layout" [ref=e53] [cursor=pointer]:
+            - img [ref=e54]
+          - button "Masonry layout" [ref=e56] [cursor=pointer]:
+            - img [ref=e57]
+          - button "Timeline layout" [ref=e61] [cursor=pointer]:
+            - img [ref=e62]
+      - generic [ref=e64]:
+        - generic [ref=e65] [cursor=pointer]:
+          - button [ref=e69]:
+            - img [ref=e70]
+          - generic [ref=e72]:
+            - generic [ref=e73]:
+              - generic [ref=e74]:
+                - img [ref=e75]
+                - text: Video Test
+              - generic [ref=e78]:
+                - img [ref=e79]
+                - text: Jun 30, 02:33 AM
+            - generic [ref=e82]:
+              - generic [ref=e83]:
+                - img [ref=e84]
+                - text: "0"
+              - generic [ref=e86]:
+                - img [ref=e87]
+                - text: "0"
+        - generic [ref=e89] [cursor=pointer]:
+          - generic [ref=e90]:
+            - img "Wedding photo" [ref=e91]
+            - button [ref=e93]:
+              - img [ref=e94]
+          - generic [ref=e96]:
+            - generic [ref=e97]:
+              - generic [ref=e98]:
+                - img [ref=e99]
+                - text: Multi Upload Test
+              - generic [ref=e102]:
+                - img [ref=e103]
+                - text: Jun 30, 02:33 AM
+            - generic [ref=e106]:
+              - generic [ref=e107]:
+                - img [ref=e108]
+                - text: "0"
+              - generic [ref=e110]:
+                - img [ref=e111]
+                - text: "0"
+        - generic [ref=e113] [cursor=pointer]:
+          - generic [ref=e114]:
+            - img "Wedding photo" [ref=e115]
+            - button [ref=e117]:
+              - img [ref=e118]
+          - generic [ref=e120]:
+            - generic [ref=e121]:
+              - generic [ref=e122]:
+                - img [ref=e123]
+                - text: Multi Upload Test
+              - generic [ref=e126]:
+                - img [ref=e127]
+                - text: Jun 30, 02:33 AM
+            - generic [ref=e130]:
+              - generic [ref=e131]:
+                - img [ref=e132]
+                - text: "0"
+              - generic [ref=e134]:
+                - img [ref=e135]
+                - text: "0"
+    - generic [ref=e137]:
+      - button [ref=e138] [cursor=pointer]:
+        - img [ref=e139]
+      - button [ref=e142] [cursor=pointer]:
+        - img [ref=e143]
+      - button [ref=e145] [cursor=pointer]:
+        - img [ref=e146]
+      - generic [ref=e148]:
+        - button "Download photo" [active] [ref=e149] [cursor=pointer]:
+          - img [ref=e150]
+        - button "Toggle slideshow" [ref=e153] [cursor=pointer]:
+          - img [ref=e154]
+        - button "Like photo" [ref=e159] [cursor=pointer]:
+          - img [ref=e160]
+        - button "Show comments" [ref=e162] [cursor=pointer]:
+          - img [ref=e163]
+      - paragraph [ref=e167]: By Multi Upload Test • Jun 30, 02:33 AM
 ```
 
 # Test source

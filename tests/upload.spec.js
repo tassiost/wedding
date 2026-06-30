@@ -66,8 +66,8 @@ test('photo upload works and appears in gallery', async ({ page }) => {
     await page.waitForLoadState('networkidle');
   }
   
-  // Check if photos are displayed
-  const photos = page.locator('img[src^="data:image"]');
+  // Check if photos are displayed (supports both legacy data:image and R2 URLs)
+  const photos = page.locator('img[src^="data:image"], img[src^="http"]');
   const photoCount = await photos.count();
   console.log('Photo count in gallery:', photoCount);
   
