@@ -1,5 +1,64 @@
 {
   "photos": [
+    {
+      "id": "1782779601307-kq6ktiucl",
+      "filename": "test.png",
+      "caption": "Test photo caption",
+      "guestName": "Test Guest",
+      "uploadedAt": "2026-06-30T00:33:21.307Z",
+      "dateTaken": "2026-06-30T00:33:21.307Z",
+      "r2Url": "https://pub-bb9444735bc44da9934152376e2dc0de.r2.dev/1782779600988-qu3lmdpl9-test.png",
+      "r2Key": "1782779600988-qu3lmdpl9-test.png",
+      "fileSize": 95,
+      "metadata": {
+        "width": 1,
+        "height": 1
+      }
+    },
+    {
+      "id": "1782779597108-nshtkwthu",
+      "filename": "test.mp4",
+      "caption": "",
+      "guestName": "Video Test",
+      "uploadedAt": "2026-06-30T00:33:17.108Z",
+      "dateTaken": "2026-06-30T00:33:14.746Z",
+      "r2Url": "https://pub-bb9444735bc44da9934152376e2dc0de.r2.dev/1782779596819-6dd1cf10s-test.mp4",
+      "r2Key": "1782779596819-6dd1cf10s-test.mp4",
+      "fileSize": 36,
+      "metadata": {
+        "dateTaken": "2026-06-30T00:33:14.746Z"
+      }
+    },
+    {
+      "id": "1782779590317-ul3mey6gh",
+      "filename": "test2.png",
+      "caption": "",
+      "guestName": "Multi Upload Test",
+      "uploadedAt": "2026-06-30T00:33:10.317Z",
+      "dateTaken": "2026-06-30T00:33:10.317Z",
+      "r2Url": "https://pub-bb9444735bc44da9934152376e2dc0de.r2.dev/1782779589996-wk4u2bpg1-test2.png",
+      "r2Key": "1782779589996-wk4u2bpg1-test2.png",
+      "fileSize": 69,
+      "metadata": {
+        "width": 1,
+        "height": 1
+      }
+    },
+    {
+      "id": "1782779587319-pypi9gh7e",
+      "filename": "test1.png",
+      "caption": "",
+      "guestName": "Multi Upload Test",
+      "uploadedAt": "2026-06-30T00:33:07.319Z",
+      "dateTaken": "2026-06-30T00:33:07.319Z",
+      "r2Url": "https://pub-bb9444735bc44da9934152376e2dc0de.r2.dev/1782779587032-rj1t8sz4f-test1.png",
+      "r2Key": "1782779587032-rj1t8sz4f-test1.png",
+      "fileSize": 95,
+      "metadata": {
+        "width": 1,
+        "height": 1
+      }
+    }
   ],
-  "lastUpdated": "2026-06-29T22:52:48.089Z"
+  "lastUpdated": "2026-06-30T00:33:21.307Z"
 }
