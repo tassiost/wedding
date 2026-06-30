@@ -1,6 +1,20 @@
 {
   "photos": [
     {
+      "id": "1782780658417-098snkf9a",
+      "filename": "test.mp4",
+      "caption": "",
+      "guestName": "Video Test",
+      "uploadedAt": "2026-06-30T00:50:58.417Z",
+      "dateTaken": "2026-06-30T00:50:56.105Z",
+      "r2Url": "https://pub-bb9444735bc44da9934152376e2dc0de.r2.dev/1782780658122-dn00g7ong-test.mp4",
+      "r2Key": "1782780658122-dn00g7ong-test.mp4",
+      "fileSize": 36,
+      "metadata": {
+        "dateTaken": "2026-06-30T00:50:56.105Z"
+      }
+    },
+    {
       "id": "1782780653051-03bbtbkeb",
       "filename": "test2.png",
       "caption": "",
@@ -117,5 +131,5 @@
       }
     }
   ],
-  "lastUpdated": "2026-06-30T00:50:57.659Z"
+  "lastUpdated": "2026-06-30T00:50:58.417Z"
 }
