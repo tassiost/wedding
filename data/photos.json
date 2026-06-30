@@ -1,6 +1,23 @@
 {
   "photos": [
     {
+      "id": "1782823336592-urttsc1u6",
+      "filename": "86946.mp4",
+      "caption": "",
+      "guestName": "Anonymous",
+      "uploadedAt": "2026-06-30T12:42:16.592Z",
+      "dateTaken": "2026-06-30T12:41:44.343Z",
+      "r2Url": "https://pub-bb9444735bc44da9934152376e2dc0de.r2.dev/1782823335212-os2f37w0n-86946.mp4",
+      "r2Key": "1782823335212-os2f37w0n-86946.mp4",
+      "fileSize": 14134945,
+      "metadata": {
+        "dateTaken": "2026-06-30T12:41:44.343Z",
+        "duration": 9.301188,
+        "width": 1080,
+        "height": 1920
+      }
+    },
+    {
       "id": "1782823326337-d01xeybof",
       "filename": "86947.jpg",
       "caption": "",
@@ -511,5 +528,5 @@
       }
     }
   ],
-  "lastUpdated": "2026-06-30T12:42:06.337Z"
+  "lastUpdated": "2026-06-30T12:42:16.592Z"
 }
