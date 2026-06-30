@@ -1,6 +1,20 @@
 {
   "photos": [
     {
+      "id": "1782779597108-nshtkwthu",
+      "filename": "test.mp4",
+      "caption": "",
+      "guestName": "Video Test",
+      "uploadedAt": "2026-06-30T00:33:17.108Z",
+      "dateTaken": "2026-06-30T00:33:14.746Z",
+      "r2Url": "https://pub-bb9444735bc44da9934152376e2dc0de.r2.dev/1782779596819-6dd1cf10s-test.mp4",
+      "r2Key": "1782779596819-6dd1cf10s-test.mp4",
+      "fileSize": 36,
+      "metadata": {
+        "dateTaken": "2026-06-30T00:33:14.746Z"
+      }
+    },
+    {
       "id": "1782779590317-ul3mey6gh",
       "filename": "test2.png",
       "caption": "",
@@ -13,15 +27,7 @@
       "metadata": {
         "width": 1,
         "height": 1
-      },
-      "comments": [
-        {
-          "id": "1782779596529-kndf56uui",
-          "text": "Test comment from Playwright",
-          "author": "Anonymous",
-          "timestamp": "2026-06-30T00:33:16.529Z"
-        }
-      ]
+      }
     },
     {
       "id": "1782779587319-pypi9gh7e",
@@ -39,5 +45,5 @@
       }
     }
   ],
-  "lastUpdated": "2026-06-30T00:33:16.529Z"
+  "lastUpdated": "2026-06-30T00:33:17.108Z"
 }
