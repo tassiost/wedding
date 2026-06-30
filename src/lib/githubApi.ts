@@ -32,6 +32,7 @@ export async function uploadPhoto(
   file: File,
   caption: string,
   guestName: string,
+  metadata?: any,
   onProgress?: (progress: number) => void
 ): Promise<Photo> {
   // Convert file to base64 data URL
@@ -53,6 +54,7 @@ export async function uploadPhoto(
           guestName: guestName || 'Anonymous',
           dataUrl,
           fileSize: file.size,
+          metadata: metadata || {},
         }),
       });
 

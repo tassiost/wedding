@@ -5,12 +5,26 @@ export interface Comment {
   timestamp: string;
 }
 
+export interface PhotoMetadata {
+  dateTaken?: string;
+  camera?: string;
+  lens?: string;
+  location?: {
+    latitude?: number;
+    longitude?: number;
+  };
+  duration?: number; // For videos in seconds
+  width?: number;
+  height?: number;
+}
+
 export interface Photo {
   id: string;
   filename: string;
   caption: string;
   guestName: string;
   uploadedAt: string;
+  dateTaken?: string; // When the photo/video was actually taken
   dataUrl?: string; // Legacy support for old photos
   r2Url?: string; // New R2 URL
   r2Key?: string; // R2 object key for deletion
@@ -18,6 +32,7 @@ export interface Photo {
   likes: number;
   likedBy: string[]; // Array of guest names who liked
   comments: Comment[];
+  metadata?: PhotoMetadata;
 }
 
 export interface WeddingSettings {

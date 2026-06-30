@@ -86,7 +86,15 @@ export default function Gallery() {
   const openLightbox = (photo: typeof photos[0], index: number) => {
     setLightboxPhoto(getPhotoUrl(photo));
     setLightboxCaption(photo.caption);
-    setLightboxMeta(`By ${photo.guestName || 'Anonymous'} • ${formatDate(photo.uploadedAt)}`);
+    const dateStr = formatDate(photo.dateTaken || photo.uploadedAt);
+    let meta = `By ${photo.guestName || 'Anonymous'} • ${dateStr}`;
+    if (photo.metadata?.camera) {
+      meta += ` • ${photo.metadata.camera}`;
+    }
+    if (photo.metadata?.location) {
+      meta += ` • 📍`;
+    }
+    setLightboxMeta(meta);
     setLightboxIndex(index);
     document.body.style.overflow = 'hidden';
   };
@@ -108,7 +116,15 @@ export default function Gallery() {
     const photo = filtered[nextIndex];
     setLightboxPhoto(getPhotoUrl(photo));
     setLightboxCaption(photo.caption);
-    setLightboxMeta(`By ${photo.guestName || 'Anonymous'} • ${formatDate(photo.uploadedAt)}`);
+    const dateStr = formatDate(photo.dateTaken || photo.uploadedAt);
+    let meta = `By ${photo.guestName || 'Anonymous'} • ${dateStr}`;
+    if (photo.metadata?.camera) {
+      meta += ` • ${photo.metadata.camera}`;
+    }
+    if (photo.metadata?.location) {
+      meta += ` • 📍`;
+    }
+    setLightboxMeta(meta);
     setLightboxIndex(nextIndex);
   };
 
@@ -119,7 +135,15 @@ export default function Gallery() {
     const photo = filtered[prevIndex];
     setLightboxPhoto(getPhotoUrl(photo));
     setLightboxCaption(photo.caption);
-    setLightboxMeta(`By ${photo.guestName || 'Anonymous'} • ${formatDate(photo.uploadedAt)}`);
+    const dateStr = formatDate(photo.dateTaken || photo.uploadedAt);
+    let meta = `By ${photo.guestName || 'Anonymous'} • ${dateStr}`;
+    if (photo.metadata?.camera) {
+      meta += ` • ${photo.metadata.camera}`;
+    }
+    if (photo.metadata?.location) {
+      meta += ` • 📍`;
+    }
+    setLightboxMeta(meta);
     setLightboxIndex(prevIndex);
   };
 
@@ -166,8 +190,14 @@ export default function Gallery() {
         photo.caption?.toLowerCase().includes(searchQuery.toLowerCase()) ||
         photo.guestName?.toLowerCase().includes(searchQuery.toLowerCase());
       const matchesGuest = !filterGuest || photo.guestName === filterGuest;
-      const matchesDate = !filterDate || photo.uploadedAt.startsWith(filterDate);
+      const dateToUse = photo.dateTaken || photo.uploadedAt;
+      const matchesDate = !filterDate || dateToUse.startsWith(filterDate);
       return matchesSearch && matchesGuest && matchesDate;
+    }).sort((a, b) => {
+      // Sort by dateTaken if available, otherwise uploadedAt (newest first)
+      const dateA = new Date(a.dateTaken || a.uploadedAt);
+      const dateB = new Date(b.dateTaken || b.uploadedAt);
+      return dateB.getTime() - dateA.getTime();
     });
   };
 
@@ -176,7 +206,7 @@ export default function Gallery() {
   };
 
   const getUniqueDates = () => {
-    return Array.from(new Set(photos.map(p => p.uploadedAt.split('T')[0]))).sort().reverse();
+    return Array.from(new Set(photos.map(p => (p.dateTaken || p.uploadedAt).split('T')[0]))).sort().reverse();
   };
 
   const getStorageUsage = () => {

@@ -164,9 +164,9 @@ app.get('/api/photos', async (req, res) => {
 // Upload photo to R2
 app.post('/api/photos', async (req, res) => {
   try {
-    const { filename, caption, guestName, dataUrl, fileSize } = req.body;
+    const { filename, caption, guestName, dataUrl, fileSize, metadata } = req.body;
 
-    console.log('Upload request:', { filename, fileSize, dataUrlLength: dataUrl?.length });
+    console.log('Upload request:', { filename, fileSize, dataUrlLength: dataUrl?.length, metadata });
 
     // Check R2 limits
     const usage = await getR2Usage();
@@ -179,8 +179,16 @@ app.post('/api/photos', async (req, res) => {
       });
     }
 
+    // Detect content type from dataUrl or metadata
+    let contentType = 'image/jpeg';
+    if (dataUrl.startsWith('data:video/')) {
+      contentType = dataUrl.match(/^data:(video\/\w+);/)?.[1] || 'video/mp4';
+    } else if (dataUrl.startsWith('data:image/')) {
+      contentType = dataUrl.match(/^data:(image\/\w+);/)?.[1] || 'image/jpeg';
+    }
+
     // Convert base64 to buffer
-    const base64Data = dataUrl.replace(/^data:image\/\w+;base64,/, '');
+    const base64Data = dataUrl.replace(/^data:.*?;base64,/, '');
     const buffer = Buffer.from(base64Data, 'base64');
 
     // Generate unique key for R2
@@ -192,7 +200,7 @@ app.post('/api/photos', async (req, res) => {
       Bucket: R2_BUCKET_NAME,
       Key: key,
       Body: buffer,
-      ContentType: 'image/jpeg',
+      ContentType: contentType,
     });
 
     await s3Client.send(putCommand);
@@ -229,16 +237,18 @@ app.post('/api/photos', async (req, res) => {
       }
     }
 
-    // Create new photo with R2 URL
+    // Create new photo with R2 URL and metadata
     const newPhoto = {
       id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       filename,
       caption: caption || '',
       guestName: guestName || 'Anonymous',
       uploadedAt: new Date().toISOString(),
+      dateTaken: metadata?.dateTaken || new Date().toISOString(),
       r2Url,
       r2Key: key,
       fileSize,
+      metadata: metadata || {},
     };
 
     // Add to beginning of array

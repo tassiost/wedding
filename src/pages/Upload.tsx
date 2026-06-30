@@ -4,6 +4,7 @@ import { useApp } from '@/hooks/useAppContext';
 import { UploadCloud, X, User, Loader2 } from 'lucide-react';
 import Toast from '@/components/Toast';
 import imageCompression from 'browser-image-compression';
+import { extractMetadata } from '@/lib/metadata';
 
 interface PreviewFile {
   file: File;
@@ -121,6 +122,19 @@ export default function Upload() {
         })
       );
 
+      setUploadProgress(20);
+      // Extract metadata from all files
+      const metadataList = await Promise.all(
+        previews.map(async (p) => {
+          try {
+            return await extractMetadata(p.file);
+          } catch (error) {
+            console.error('Failed to extract metadata for', p.file.name, error);
+            return {};
+          }
+        })
+      );
+
       setUploadProgress(30);
       const captions = previews.map(p => p.caption);
 
@@ -134,7 +148,7 @@ export default function Upload() {
         }));
       };
 
-      const result = await addPhotos(compressedFiles, captions, guestName, onPhotoProgress);
+      const result = await addPhotos(compressedFiles, captions, guestName, onPhotoProgress, metadataList);
 
       setUploadProgress(100);
 
@@ -190,6 +204,19 @@ export default function Upload() {
         })
       );
 
+      setUploadProgress(20);
+      // Extract metadata from failed files
+      const metadataList = await Promise.all(
+        failedPreviews.map(async (p) => {
+          try {
+            return await extractMetadata(p.file);
+          } catch (error) {
+            console.error('Failed to extract metadata for', p.file.name, error);
+            return {};
+          }
+        })
+      );
+
       setUploadProgress(30);
       const captions = failedPreviews.map(p => p.caption);
 
@@ -203,7 +230,7 @@ export default function Upload() {
         }));
       };
 
-      const result = await addPhotos(compressedFiles, captions, guestName, onPhotoProgress);
+      const result = await addPhotos(compressedFiles, captions, guestName, onPhotoProgress, metadataList);
 
       setUploadProgress(100);
 

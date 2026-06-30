@@ -148,7 +148,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
     files: File[],
     captions: string[],
     guestName: string,
-    onPhotoProgress?: (fileName: string, status: 'success' | 'failed') => void
+    onPhotoProgress?: (fileName: string, status: 'success' | 'failed') => void,
+    metadataList?: any[]
   ) => {
     if (!githubConfig) throw new Error('Not authenticated');
     setIsLoading(true);
@@ -160,7 +161,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       for (let i = 0; i < files.length; i++) {
         try {
           const file = files[i];
-          const photo = await uploadPhoto(githubConfig, file, captions[i] || '', guestName || 'Anonymous');
+          const metadata = metadataList?.[i] || {};
+          const photo = await uploadPhoto(githubConfig, file, captions[i] || '', guestName || 'Anonymous', metadata);
           newPhotos.push(photo);
           if (onPhotoProgress) {
             onPhotoProgress(file.name, 'success');
