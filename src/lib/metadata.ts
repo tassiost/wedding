@@ -72,7 +72,44 @@ export async function extractVideoMetadata(file: File): Promise<MediaMetadata> {
   const metadata: MediaMetadata = {};
 
   try {
-    // Create a video element to extract metadata
+    // Try to extract EXIF metadata from video (some formats like MOV have it)
+    try {
+      const exifData = await parse(file, {
+        tiff: true,
+        ifd0: true,
+        exif: true,
+        gps: true,
+      });
+
+      if (exifData.DateTimeOriginal) {
+        metadata.dateTaken = exifData.DateTimeOriginal.toISOString();
+      } else if (exifData.CreateDate) {
+        metadata.dateTaken = exifData.CreateDate.toISOString();
+      }
+
+      if (exifData.Make && exifData.Model) {
+        metadata.camera = `${exifData.Make} ${exifData.Model}`;
+      } else if (exifData.Model) {
+        metadata.camera = exifData.Model;
+      }
+
+      if (exifData.latitude && exifData.longitude) {
+        metadata.location = {
+          latitude: exifData.latitude,
+          longitude: exifData.longitude,
+        };
+      }
+    } catch (exifError) {
+      // EXIF extraction failed, continue with video element metadata
+      console.log('No EXIF data in video, using file metadata');
+    }
+
+    // Fallback to file's last modified date if no EXIF date found
+    if (!metadata.dateTaken && file.lastModified) {
+      metadata.dateTaken = new Date(file.lastModified).toISOString();
+    }
+
+    // Create a video element to extract duration and dimensions
     const video = document.createElement('video');
     video.preload = 'metadata';
 
@@ -95,6 +132,10 @@ export async function extractVideoMetadata(file: File): Promise<MediaMetadata> {
     URL.revokeObjectURL(video.src);
   } catch (error) {
     console.error('Failed to extract video metadata:', error);
+    // Final fallback to file last modified
+    if (file.lastModified) {
+      metadata.dateTaken = new Date(file.lastModified).toISOString();
+    }
   }
 
   return metadata;
