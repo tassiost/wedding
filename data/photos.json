@@ -1,6 +1,22 @@
 {
   "photos": [
     {
+      "id": "1782823200502-7obu5ah1t",
+      "filename": "IMG_4047.jpeg",
+      "caption": "",
+      "guestName": "Anonymous",
+      "uploadedAt": "2026-06-30T12:40:00.502Z",
+      "dateTaken": "2026-06-28T11:51:18.000Z",
+      "r2Url": "https://pub-bb9444735bc44da9934152376e2dc0de.r2.dev/1782823199853-k98j0zvbh-IMG_4047.jpeg",
+      "r2Key": "1782823199853-k98j0zvbh-IMG_4047.jpeg",
+      "fileSize": 868366,
+      "metadata": {
+        "dateTaken": "2026-06-28T11:51:18.000Z",
+        "camera": "Apple iPhone 14 Pro",
+        "lens": "iPhone 14 Pro back triple camera 6.86mm f/1.78"
+      }
+    },
+    {
       "id": "1782823197619-ijmrqggpp",
       "filename": "IMG_4048.jpeg",
       "caption": "",
@@ -214,5 +230,5 @@
       }
     }
   ],
-  "lastUpdated": "2026-06-30T12:39:57.619Z"
+  "lastUpdated": "2026-06-30T12:40:00.502Z"
 }
