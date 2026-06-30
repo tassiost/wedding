@@ -1,6 +1,21 @@
 {
   "photos": [
     {
+      "id": "1782779590317-ul3mey6gh",
+      "filename": "test2.png",
+      "caption": "",
+      "guestName": "Multi Upload Test",
+      "uploadedAt": "2026-06-30T00:33:10.317Z",
+      "dateTaken": "2026-06-30T00:33:10.317Z",
+      "r2Url": "https://pub-bb9444735bc44da9934152376e2dc0de.r2.dev/1782779589996-wk4u2bpg1-test2.png",
+      "r2Key": "1782779589996-wk4u2bpg1-test2.png",
+      "fileSize": 69,
+      "metadata": {
+        "width": 1,
+        "height": 1
+      }
+    },
+    {
       "id": "1782779587319-pypi9gh7e",
       "filename": "test1.png",
       "caption": "",
@@ -16,5 +31,5 @@
       }
     }
   ],
-  "lastUpdated": "2026-06-30T00:33:07.319Z"
+  "lastUpdated": "2026-06-30T00:33:10.317Z"
 }
