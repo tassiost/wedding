@@ -1,6 +1,18 @@
 {
   "photos": [
     {
+      "id": "1782821784877-s5ez8secx",
+      "filename": "25e56196-d17a-4e5c-96cc-5a97ae0c6a07.jpeg",
+      "caption": "",
+      "guestName": "Anonymous",
+      "uploadedAt": "2026-06-30T12:16:24.877Z",
+      "dateTaken": "2026-06-30T12:16:24.877Z",
+      "r2Url": "https://pub-bb9444735bc44da9934152376e2dc0de.r2.dev/1782821784448-hefd07oe2-25e56196-d17a-4e5c-96cc-5a97ae0c6a07.jpeg",
+      "r2Key": "1782821784448-hefd07oe2-25e56196-d17a-4e5c-96cc-5a97ae0c6a07.jpeg",
+      "fileSize": 618551,
+      "metadata": {}
+    },
+    {
       "id": "1782821780692-7l0ry147v",
       "filename": "IMG_4173.jpeg",
       "caption": "",
@@ -186,5 +198,5 @@
       }
     }
   ],
-  "lastUpdated": "2026-06-30T12:16:20.692Z"
+  "lastUpdated": "2026-06-30T12:16:24.877Z"
 }
