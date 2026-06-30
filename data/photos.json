@@ -1,6 +1,23 @@
 {
   "photos": [
     {
+      "id": "1782823537674-t552sjkva",
+      "filename": "86744.jpg",
+      "caption": "",
+      "guestName": "Anonymous",
+      "uploadedAt": "2026-06-30T12:45:37.674Z",
+      "dateTaken": "2026-06-27T08:17:42.000Z",
+      "r2Url": "https://pub-bb9444735bc44da9934152376e2dc0de.r2.dev/1782823537085-yeco7953p-86744.jpg",
+      "r2Key": "1782823537085-yeco7953p-86744.jpg",
+      "fileSize": 756921,
+      "metadata": {
+        "dateTaken": "2026-06-27T08:17:42.000Z",
+        "camera": "samsung Galaxy S25",
+        "width": 4000,
+        "height": 3000
+      }
+    },
+    {
       "id": "1782823534461-2cemifskg",
       "filename": "86746.jpg",
       "caption": "",
@@ -783,5 +800,5 @@
       }
     }
   ],
-  "lastUpdated": "2026-06-30T12:45:34.461Z"
+  "lastUpdated": "2026-06-30T12:45:37.674Z"
 }
