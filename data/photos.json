@@ -43,7 +43,15 @@
       "metadata": {
         "width": 1,
         "height": 1
-      }
+      },
+      "comments": [
+        {
+          "id": "1782780657659-twejlx44t",
+          "text": "Test comment",
+          "author": "Anonymous",
+          "timestamp": "2026-06-30T00:50:57.659Z"
+        }
+      ]
     },
     {
       "id": "1782779601307-kq6ktiucl",
@@ -109,5 +117,5 @@
       }
     }
   ],
-  "lastUpdated": "2026-06-30T00:50:53.051Z"
+  "lastUpdated": "2026-06-30T00:50:57.659Z"
 }
