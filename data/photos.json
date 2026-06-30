@@ -13,7 +13,15 @@
       "metadata": {
         "width": 1,
         "height": 1
-      }
+      },
+      "comments": [
+        {
+          "id": "1782779596529-kndf56uui",
+          "text": "Test comment from Playwright",
+          "author": "Anonymous",
+          "timestamp": "2026-06-30T00:33:16.529Z"
+        }
+      ]
     },
     {
       "id": "1782779587319-pypi9gh7e",
@@ -31,5 +39,5 @@
       }
     }
   ],
-  "lastUpdated": "2026-06-30T00:33:10.317Z"
+  "lastUpdated": "2026-06-30T00:33:16.529Z"
 }
