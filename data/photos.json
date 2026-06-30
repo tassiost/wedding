@@ -1,5 +1,20 @@
 {
   "photos": [
+    {
+      "id": "1782779585276-nelyp00v8",
+      "filename": "test.png",
+      "caption": "Test caption",
+      "guestName": "Test Guest",
+      "uploadedAt": "2026-06-30T00:33:05.276Z",
+      "dateTaken": "2026-06-30T00:33:05.276Z",
+      "r2Url": "https://pub-bb9444735bc44da9934152376e2dc0de.r2.dev/1782779584819-ldu1jvws0-test.png",
+      "r2Key": "1782779584819-ldu1jvws0-test.png",
+      "fileSize": 95,
+      "metadata": {
+        "width": 1,
+        "height": 1
+      }
+    }
   ],
-  "lastUpdated": "2026-06-29T22:52:48.089Z"
+  "lastUpdated": "2026-06-30T00:33:05.276Z"
 }
