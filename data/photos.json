@@ -848,7 +848,11 @@
         "camera": "samsung SM-G991B",
         "width": 3648,
         "height": 2736
-      }
+      },
+      "likedBy": [
+        "Chri"
+      ],
+      "likes": 1
     },
     {
       "id": "1782823227508-98b5gk411",
@@ -1208,5 +1212,5 @@
       }
     }
   ],
-  "lastUpdated": "2026-06-30T12:48:37.020Z"
+  "lastUpdated": "2026-06-30T12:49:38.964Z"
 }
