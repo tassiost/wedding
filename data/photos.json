@@ -1,14 +1,14 @@
 {
   "photos": [
     {
-      "id": "1782779585276-nelyp00v8",
-      "filename": "test.png",
-      "caption": "Test caption",
-      "guestName": "Test Guest",
-      "uploadedAt": "2026-06-30T00:33:05.276Z",
-      "dateTaken": "2026-06-30T00:33:05.276Z",
-      "r2Url": "https://pub-bb9444735bc44da9934152376e2dc0de.r2.dev/1782779584819-ldu1jvws0-test.png",
-      "r2Key": "1782779584819-ldu1jvws0-test.png",
+      "id": "1782779587319-pypi9gh7e",
+      "filename": "test1.png",
+      "caption": "",
+      "guestName": "Multi Upload Test",
+      "uploadedAt": "2026-06-30T00:33:07.319Z",
+      "dateTaken": "2026-06-30T00:33:07.319Z",
+      "r2Url": "https://pub-bb9444735bc44da9934152376e2dc0de.r2.dev/1782779587032-rj1t8sz4f-test1.png",
+      "r2Key": "1782779587032-rj1t8sz4f-test1.png",
       "fileSize": 95,
       "metadata": {
         "width": 1,
@@ -16,5 +16,5 @@
       }
     }
   ],
-  "lastUpdated": "2026-06-30T00:33:05.276Z"
+  "lastUpdated": "2026-06-30T00:33:07.319Z"
 }
