@@ -1,6 +1,23 @@
 {
   "photos": [
     {
+      "id": "1783161296340-3zd7zthuz",
+      "filename": "IMG_4810.mov",
+      "caption": "",
+      "guestName": "Anonymous",
+      "uploadedAt": "2026-07-04T10:34:56.340Z",
+      "dateTaken": "2026-06-27T16:47:08.000Z",
+      "r2Url": "https://pub-bb9444735bc44da9934152376e2dc0de.r2.dev/1783161294695-7vct0rfxo-IMG_4810.mov",
+      "r2Key": "1783161294695-7vct0rfxo-IMG_4810.mov",
+      "fileSize": 19177701,
+      "metadata": {
+        "dateTaken": "2026-06-27T16:47:08.000Z",
+        "duration": 9.768333333333333,
+        "width": 1080,
+        "height": 1920
+      }
+    },
+    {
       "id": "1783161266582-1oxqvnur3",
       "filename": "IMG_4797.jpeg",
       "caption": "",
@@ -2745,5 +2762,5 @@
       }
     }
   ],
-  "lastUpdated": "2026-07-04T10:34:26.583Z"
+  "lastUpdated": "2026-07-04T10:34:56.340Z"
 }
