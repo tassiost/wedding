@@ -2167,7 +2167,11 @@
         "camera": "samsung Galaxy S25",
         "width": 4000,
         "height": 3000
-      }
+      },
+      "likedBy": [
+        "Anonymous"
+      ],
+      "likes": 1
     },
     {
       "id": "1782823584513-gy4ql5kzp",
@@ -2913,5 +2917,5 @@
       }
     }
   ],
-  "lastUpdated": "2026-07-04T10:36:06.104Z"
+  "lastUpdated": "2026-07-06T14:10:57.463Z"
 }
