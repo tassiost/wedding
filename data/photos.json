@@ -2790,7 +2790,11 @@
         "dateTaken": "2026-06-27T15:15:34.000Z",
         "camera": "Apple iPhone 14 Pro",
         "lens": "iPhone 14 Pro back triple camera 6.86mm f/1.78"
-      }
+      },
+      "likedBy": [
+        "Victoria"
+      ],
+      "likes": 1
     },
     {
       "id": "1782823215808-jmf57p4qg",
@@ -2945,5 +2949,5 @@
       }
     }
   ],
-  "lastUpdated": "2026-07-08T14:16:56.325Z"
+  "lastUpdated": "2026-07-08T14:17:03.350Z"
 }
