@@ -2594,7 +2594,11 @@
         "camera": "samsung Galaxy S25",
         "width": 4000,
         "height": 2252
-      }
+      },
+      "likedBy": [
+        "Victoria"
+      ],
+      "likes": 1
     },
     {
       "id": "1782823323334-5nefwpzmk",
@@ -2957,5 +2961,5 @@
       }
     }
   ],
-  "lastUpdated": "2026-07-08T14:17:10.937Z"
+  "lastUpdated": "2026-07-08T14:17:14.130Z"
 }
