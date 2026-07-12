@@ -2200,10 +2200,8 @@
         "width": 4000,
         "height": 3000
       },
-      "likedBy": [
-        "Anonymous"
-      ],
-      "likes": 1
+      "likedBy": [],
+      "likes": 0
     },
     {
       "id": "1782823584513-gy4ql5kzp",
@@ -2965,5 +2963,5 @@
       }
     }
   ],
-  "lastUpdated": "2026-07-08T14:17:17.133Z"
+  "lastUpdated": "2026-07-12T00:31:41.450Z"
 }
