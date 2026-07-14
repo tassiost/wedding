@@ -1,6 +1,26 @@
 {
   "photos": [
     {
+      "id": "1784056352845-63jqdfu7p",
+      "filename": "IMG_1812.jpeg",
+      "caption": "",
+      "guestName": "Flo",
+      "uploadedAt": "2026-07-14T19:12:32.845Z",
+      "dateTaken": "2026-06-28T11:29:17.000Z",
+      "r2Url": "https://pub-bb9444735bc44da9934152376e2dc0de.r2.dev/1784056352197-puc9uhc3z-IMG_1812.jpeg",
+      "r2Key": "1784056352197-puc9uhc3z-IMG_1812.jpeg",
+      "fileSize": 963287,
+      "metadata": {
+        "dateTaken": "2026-06-28T11:29:17.000Z",
+        "camera": "Apple iPhone 17 Pro",
+        "lens": "iPhone 17 Pro back triple camera 6.765mm f/1.78",
+        "location": {
+          "latitude": 44.788758333333334,
+          "longitude": 7.979097222222222
+        }
+      }
+    },
+    {
       "id": "1784056349721-udifal63g",
       "filename": "IMG_1785.jpeg",
       "caption": "",
@@ -3203,5 +3223,5 @@
       }
     }
   ],
-  "lastUpdated": "2026-07-14T19:12:29.721Z"
+  "lastUpdated": "2026-07-14T19:12:32.845Z"
 }
