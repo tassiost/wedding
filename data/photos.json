@@ -20,7 +20,15 @@
         }
       },
       "likedBy": [],
-      "likes": 0
+      "likes": 0,
+      "comments": [
+        {
+          "id": "1784280606600-lkksam76u",
+          "text": "Test comment",
+          "author": "Tester",
+          "timestamp": "2026-07-17T09:30:06.601Z"
+        }
+      ]
     },
     {
       "id": "1784056358755-jalv74832",
@@ -3285,5 +3293,5 @@
       }
     }
   ],
-  "lastUpdated": "2026-07-17T09:30:01.751Z"
+  "lastUpdated": "2026-07-17T09:30:06.914Z"
 }
