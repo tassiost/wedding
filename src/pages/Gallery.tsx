@@ -25,8 +25,6 @@ export default function Gallery() {
   const [showComments, setShowComments] = useState(false);
   const [isLiking, setIsLiking] = useState(false);
   const [isPostingComment, setIsPostingComment] = useState(false);
-  const [isZipping, setIsZipping] = useState(false);
-  const [zipProgress, setZipProgress] = useState('');
 
   const showToast = (message: string) => {
     setToast({ message, visible: true });
@@ -85,60 +83,10 @@ export default function Gallery() {
     showToast('Gallery refreshed');
   };
 
-  const handleDownloadAll = async () => {
-    if (isZipping || photos.length === 0) return;
-    setIsZipping(true);
-    setZipProgress('Connecting...');
-    try {
-      const apiBase = import.meta.env.VITE_API_URL || 'https://wedding-backend-6g10.onrender.com';
-      const res = await fetch(`${apiBase}/api/photos/zip`);
-      if (!res.ok) throw new Error('Zip failed');
-
-      const contentLength = parseInt(res.headers.get('Content-Length') || '0', 10);
-      const reader = res.body?.getReader();
-      if (!reader) throw new Error('No stream');
-
-      const chunks: Uint8Array[] = [];
-      let received = 0;
-      let photoCount = 0;
-      const startTime = Date.now();
-
-      for (;;) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        if (value) {
-          chunks.push(value);
-          received += value.length;
-          if (contentLength > 0) {
-            const pct = Math.round((received / contentLength) * 100);
-            const elapsed = (Date.now() - startTime) / 1000;
-            const speed = (received / (1024 * 1024) / Math.max(elapsed, 0.1)).toFixed(1);
-            setZipProgress(`${pct}% • ${speed} MB/s`);
-          } else {
-            const mb = (received / (1024 * 1024)).toFixed(1);
-            setZipProgress(`${mb} MB downloaded`);
-          }
-        }
-      }
-
-      const blob = new Blob(chunks, { type: 'application/zip' });
-      if (blob.size === 0) throw new Error('Empty response');
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = 'wedding-photos.zip';
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-      showToast(`Downloaded ${photos.length} photos`);
-    } catch (err) {
-      console.error('Download all failed:', err);
-      showToast('Download all failed — try again');
-    } finally {
-      setIsZipping(false);
-      setZipProgress('');
-    }
+  const handleDownloadAll = () => {
+    if (photos.length === 0) return;
+    const apiBase = import.meta.env.VITE_API_URL || 'https://wedding-backend-6g10.onrender.com';
+    window.location.href = `${apiBase}/api/photos/zip`;
   };
 
   const openLightbox = (photo: typeof photos[0], index: number) => {
@@ -374,12 +322,12 @@ export default function Gallery() {
             </button>
             <button
               onClick={handleDownloadAll}
-              disabled={isZipping || photos.length === 0}
+              disabled={photos.length === 0}
               className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-semibold text-white bg-[#2c2c2c] hover:bg-[#c9a96e] transition-all duration-200 disabled:opacity-50"
               title="Download all photos as zip"
             >
-              {isZipping ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
-              {isZipping ? (zipProgress || 'Zipping...') : 'Download All'}
+              <Download className="w-4 h-4" />
+              Download All
             </button>
             <Link
               to="/upload"
