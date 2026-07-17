@@ -261,7 +261,7 @@ app.post('/api/photos', async (req, res) => {
       lastUpdated: new Date().toISOString(),
     };
 
-    const content = Buffer.from(JSON.stringify(data, null, 2)).toString('base64');
+    let content = Buffer.from(JSON.stringify(data, null, 2)).toString('base64');
     console.log('Content size:', content.length, 'bytes');
 
     // Retry logic for SHA mismatch (409 error)
@@ -323,9 +323,7 @@ app.post('/api/photos', async (req, res) => {
           };
           // Update content for retry
           const contentRetry = Buffer.from(JSON.stringify(dataRetry, null, 2)).toString('base64');
-          // Replace content variable for next attempt
-          const tempContent = content;
-          Object.assign(body, { content: contentRetry, sha });
+          content = contentRetry;
           continue;
         }
       }
@@ -386,7 +384,7 @@ app.delete('/api/photos/:id', async (req, res) => {
 
       // Update R2 usage
       const usage = await getR2Usage();
-      usage.storageBytes -= photoToDelete.fileSize || 0;
+      usage.storageBytes = Math.max(0, usage.storageBytes - (photoToDelete.fileSize || 0));
       await updateR2Usage(usage);
     }
 

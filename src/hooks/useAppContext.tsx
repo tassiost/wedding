@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from 'react';
 import type { Photo, WeddingSettings, GitHubConfig } from '@/types';
-import { fetchPhotos, savePhotos, uploadPhoto, deletePhoto, verifyToken } from '@/lib/githubApi';
+import { fetchPhotos, uploadPhoto, deletePhoto, verifyToken } from '@/lib/githubApi';
 import { BUILT_IN_CONFIG } from '@/config';
 
 interface AppContextType {
@@ -17,8 +17,7 @@ interface AppContextType {
   // Photos
   photos: Photo[];
   loadPhotos: () => Promise<void>;
-  addPhoto: (file: File, caption: string, guestName: string) => Promise<void>;
-  addPhotos: (files: File[], captions: string[], guestName: string) => Promise<number>;
+  addPhotos: (files: File[], captions: string[], guestName: string) => Promise<{ successCount: number; failedFiles: string[] }>;
   removePhoto: (id: string) => Promise<void>;
   isLoading: boolean;
   uploadProgress: number;
@@ -131,19 +130,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   }, [githubConfig]);
 
-  const addPhoto = useCallback(async (file: File, caption: string, guestName: string) => {
-    if (!githubConfig) throw new Error('Not authenticated');
-    setIsLoading(true);
-    setUploadProgress(0);
-    try {
-      const photo = await uploadPhoto(githubConfig, file, caption, guestName);
-      setPhotos(prev => [photo, ...prev]);
-      setUploadProgress(100);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [githubConfig]);
-
   const addPhotos = useCallback(async (
     files: File[],
     captions: string[],
@@ -207,7 +193,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
         authenticate,
         photos,
         loadPhotos,
-        addPhoto,
         addPhotos,
         removePhoto,
         isLoading,
@@ -225,13 +210,4 @@ export function useApp() {
     throw new Error('useApp must be used within an AppProvider');
   }
   return context;
-}
-
-function fileToDataUrl(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result as string);
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
 }

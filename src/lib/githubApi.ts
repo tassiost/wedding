@@ -22,11 +22,6 @@ export async function fetchPhotos(config: GitHubConfig): Promise<Photo[]> {
   }
 }
 
-export async function savePhotos(config: GitHubConfig, photos: Photo[]): Promise<void> {
-  // This is now handled by the backend upload endpoint
-  throw new Error('Use uploadPhoto instead');
-}
-
 export async function uploadPhoto(
   config: GitHubConfig,
   file: File,
