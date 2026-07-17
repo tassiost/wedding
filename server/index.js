@@ -50,6 +50,45 @@ function getHeaders() {
   };
 }
 
+// ponytail: shared fetch-mutate-save with SHA retry — fixes concurrent like/comment/delete data loss
+// mutateFn receives parsed data, mutates in place, returns { result, message } or throws to abort
+async function updatePhotosWithRetry(mutateFn, maxRetries = 3) {
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    const response = await fetch(
+      `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${PHOTOS_FILE_PATH}?ref=${BRANCH}`,
+      { headers: getHeaders() }
+    );
+    if (!response.ok) throw new Error('Failed to fetch photos');
+
+    const fileData = await response.json();
+    const content = Buffer.from(fileData.content, 'base64').toString('utf-8');
+    const data = JSON.parse(content);
+
+    const { result, message } = mutateFn(data);
+    const newContent = Buffer.from(JSON.stringify({
+      photos: data.photos,
+      lastUpdated: new Date().toISOString(),
+    }, null, 2)).toString('base64');
+
+    const putResponse = await fetch(
+      `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${PHOTOS_FILE_PATH}`,
+      {
+        method: 'PUT',
+        headers: getHeaders(),
+        body: JSON.stringify({ message: message || 'Update photos', content: newContent, branch: BRANCH, sha: fileData.sha }),
+      }
+    );
+
+    if (putResponse.ok) return result;
+    if (putResponse.status === 409 && attempt < maxRetries - 1) {
+      console.log(`SHA mismatch, retrying (${attempt + 1}/${maxRetries})`);
+      continue;
+    }
+    throw new Error(`GitHub save failed: ${putResponse.status}`);
+  }
+  throw new Error('Max retries exceeded');
+}
+
 // Health check endpoint for keep-alive
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
@@ -354,27 +393,20 @@ app.delete('/api/photos/:id', async (req, res) => {
   try {
     const { id } = req.params;
 
-    // Fetch current photos
-    const response = await fetch(
-      `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${PHOTOS_FILE_PATH}?ref=${BRANCH}`,
-      { headers: getHeaders() }
-    );
+    // Delete from R2 first (outside retry — R2 doesn't have concurrency issues)
+    let r2Deleted = false;
+    let photoToDelete = null;
 
-    if (!response.ok) {
-      throw new Error('Failed to fetch photos');
-    }
+    const result = await updatePhotosWithRetry((data) => {
+      photoToDelete = data.photos.find(p => p.id === id);
+      if (!photoToDelete) throw new Error('NOT_FOUND');
 
-    const fileData = await response.json();
-    const content = Buffer.from(fileData.content, 'base64').toString('utf-8');
-    const data = JSON.parse(content);
-    const photoToDelete = data.photos.find(p => p.id === id);
+      data.photos = data.photos.filter(p => p.id !== id);
+      return { result: { success: true }, message: 'Delete wedding photo' };
+    });
 
-    if (!photoToDelete) {
-      return res.status(404).json({ error: 'Photo not found' });
-    }
-
-    // Delete from R2 if it has an R2 key
-    if (photoToDelete.r2Key) {
+    // R2 delete after metadata is committed
+    if (photoToDelete?.r2Key) {
       const deleteCommand = new DeleteObjectCommand({
         Bucket: R2_BUCKET_NAME,
         Key: photoToDelete.r2Key,
@@ -382,44 +414,14 @@ app.delete('/api/photos/:id', async (req, res) => {
       await s3Client.send(deleteCommand);
       console.log('Deleted from R2:', photoToDelete.r2Key);
 
-      // Update R2 usage
       const usage = await getR2Usage();
       usage.storageBytes = Math.max(0, usage.storageBytes - (photoToDelete.fileSize || 0));
       await updateR2Usage(usage);
     }
 
-    const filteredPhotos = data.photos.filter(p => p.id !== id);
-
-    // Save updated photos
-    const updatedData = {
-      photos: filteredPhotos,
-      lastUpdated: new Date().toISOString(),
-    };
-
-    const newContent = Buffer.from(JSON.stringify(updatedData, null, 2)).toString('base64');
-
-    const body = {
-      message: 'Delete wedding photo',
-      content: newContent,
-      branch: BRANCH,
-      sha: fileData.sha,
-    };
-
-    const putResponse = await fetch(
-      `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${PHOTOS_FILE_PATH}`,
-      {
-        method: 'PUT',
-        headers: getHeaders(),
-        body: JSON.stringify(body),
-      }
-    );
-
-    if (!putResponse.ok) {
-      throw new Error('Failed to delete photo');
-    }
-
-    res.json({ success: true });
+    res.json(result);
   } catch (error) {
+    if (error.message === 'NOT_FOUND') return res.status(404).json({ error: 'Photo not found' });
     console.error('Error deleting photo:', error);
     res.status(500).json({ error: 'Failed to delete photo' });
   }
@@ -431,73 +433,29 @@ app.post('/api/photos/:id/like', async (req, res) => {
     const { id } = req.params;
     const { guestName } = req.body;
 
-    // Fetch current photos
-    const response = await fetch(
-      `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${PHOTOS_FILE_PATH}?ref=${BRANCH}`,
-      { headers: getHeaders() }
-    );
+    const result = await updatePhotosWithRetry((data) => {
+      const photoIndex = data.photos.findIndex(p => p.id === id);
+      if (photoIndex === -1) throw new Error('NOT_FOUND');
 
-    if (!response.ok) {
-      throw new Error('Failed to fetch photos');
-    }
+      const photo = data.photos[photoIndex];
+      if (!photo.likedBy) photo.likedBy = [];
+      if (!photo.likes) photo.likes = 0;
 
-    const fileData = await response.json();
-    const content = Buffer.from(fileData.content, 'base64').toString('utf-8');
-    const data = JSON.parse(content);
-
-    // Find and update photo
-    const photoIndex = data.photos.findIndex(p => p.id === id);
-    if (photoIndex === -1) {
-      return res.status(404).json({ error: 'Photo not found' });
-    }
-
-    const photo = data.photos[photoIndex];
-    if (!photo.likedBy) photo.likedBy = [];
-    if (!photo.likes) photo.likes = 0;
-
-    const likeIndex = photo.likedBy.indexOf(guestName);
-    if (likeIndex === -1) {
-      // Add like
-      photo.likedBy.push(guestName);
-      photo.likes = photo.likedBy.length;
-    } else {
-      // Remove like
-      photo.likedBy.splice(likeIndex, 1);
-      photo.likes = photo.likedBy.length;
-    }
-
-    data.photos[photoIndex] = photo;
-
-    // Save updated photos
-    const updatedData = {
-      photos: data.photos,
-      lastUpdated: new Date().toISOString(),
-    };
-
-    const newContent = Buffer.from(JSON.stringify(updatedData, null, 2)).toString('base64');
-
-    const body = {
-      message: 'Update photo likes',
-      content: newContent,
-      branch: BRANCH,
-      sha: fileData.sha,
-    };
-
-    const putResponse = await fetch(
-      `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${PHOTOS_FILE_PATH}`,
-      {
-        method: 'PUT',
-        headers: getHeaders(),
-        body: JSON.stringify(body),
+      const likeIndex = photo.likedBy.indexOf(guestName);
+      if (likeIndex === -1) {
+        photo.likedBy.push(guestName);
+      } else {
+        photo.likedBy.splice(likeIndex, 1);
       }
-    );
+      photo.likes = photo.likedBy.length;
+      data.photos[photoIndex] = photo;
 
-    if (!putResponse.ok) {
-      throw new Error('Failed to update likes');
-    }
+      return { result: { likes: photo.likes, likedBy: photo.likedBy }, message: 'Update photo likes' };
+    });
 
-    res.json({ likes: photo.likes, likedBy: photo.likedBy });
+    res.json(result);
   } catch (error) {
+    if (error.message === 'NOT_FOUND') return res.status(404).json({ error: 'Photo not found' });
     console.error('Error updating likes:', error);
     res.status(500).json({ error: 'Failed to update likes' });
   }
@@ -509,29 +467,6 @@ app.post('/api/photos/:id/comments', async (req, res) => {
     const { id } = req.params;
     const { text, author } = req.body;
 
-    // Fetch current photos
-    const response = await fetch(
-      `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${PHOTOS_FILE_PATH}?ref=${BRANCH}`,
-      { headers: getHeaders() }
-    );
-
-    if (!response.ok) {
-      throw new Error('Failed to fetch photos');
-    }
-
-    const fileData = await response.json();
-    const content = Buffer.from(fileData.content, 'base64').toString('utf-8');
-    const data = JSON.parse(content);
-
-    // Find and update photo
-    const photoIndex = data.photos.findIndex(p => p.id === id);
-    if (photoIndex === -1) {
-      return res.status(404).json({ error: 'Photo not found' });
-    }
-
-    const photo = data.photos[photoIndex];
-    if (!photo.comments) photo.comments = [];
-
     const newComment = {
       id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       text,
@@ -539,39 +474,21 @@ app.post('/api/photos/:id/comments', async (req, res) => {
       timestamp: new Date().toISOString(),
     };
 
-    photo.comments.push(newComment);
-    data.photos[photoIndex] = photo;
+    const result = await updatePhotosWithRetry((data) => {
+      const photoIndex = data.photos.findIndex(p => p.id === id);
+      if (photoIndex === -1) throw new Error('NOT_FOUND');
 
-    // Save updated photos
-    const updatedData = {
-      photos: data.photos,
-      lastUpdated: new Date().toISOString(),
-    };
+      const photo = data.photos[photoIndex];
+      if (!photo.comments) photo.comments = [];
+      photo.comments.push(newComment);
+      data.photos[photoIndex] = photo;
 
-    const newContent = Buffer.from(JSON.stringify(updatedData, null, 2)).toString('base64');
+      return { result: newComment, message: 'Add photo comment' };
+    });
 
-    const body = {
-      message: 'Add photo comment',
-      content: newContent,
-      branch: BRANCH,
-      sha: fileData.sha,
-    };
-
-    const putResponse = await fetch(
-      `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${PHOTOS_FILE_PATH}`,
-      {
-        method: 'PUT',
-        headers: getHeaders(),
-        body: JSON.stringify(body),
-      }
-    );
-
-    if (!putResponse.ok) {
-      throw new Error('Failed to add comment');
-    }
-
-    res.json(newComment);
+    res.json(result);
   } catch (error) {
+    if (error.message === 'NOT_FOUND') return res.status(404).json({ error: 'Photo not found' });
     console.error('Error adding comment:', error);
     res.status(500).json({ error: 'Failed to add comment' });
   }
