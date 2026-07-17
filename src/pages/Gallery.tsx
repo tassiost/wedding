@@ -92,6 +92,7 @@ export default function Gallery() {
       const res = await fetch(`${apiBase}/api/photos/zip`);
       if (!res.ok) throw new Error('Zip failed');
       const blob = await res.blob();
+      if (blob.size === 0) throw new Error('Empty response');
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
@@ -103,7 +104,7 @@ export default function Gallery() {
       showToast('Downloaded all photos');
     } catch (err) {
       console.error('Download all failed:', err);
-      showToast('Download all failed');
+      showToast('Download all failed — try again');
     } finally {
       setIsZipping(false);
     }
