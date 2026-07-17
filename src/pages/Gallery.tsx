@@ -489,7 +489,7 @@ export default function Gallery() {
                         </span>
                         <span className="flex items-center gap-1">
                           <Clock className="w-3 h-3" />
-                          {formatDate(photo.uploadedAt)}
+                          {formatDate(photo.dateTaken || photo.uploadedAt)}
                         </span>
                       </div>
                       <div className="flex items-center gap-2 mt-2 text-xs text-[#6b6b6b]">
@@ -555,7 +555,7 @@ export default function Gallery() {
                         </span>
                         <span className="flex items-center gap-1">
                           <Clock className="w-3 h-3" />
-                          {formatDate(photo.uploadedAt)}
+                          {formatDate(photo.dateTaken || photo.uploadedAt)}
                         </span>
                       </div>
                     </div>
@@ -617,7 +617,7 @@ export default function Gallery() {
                                 </span>
                                 <span className="flex items-center gap-1">
                                   <Clock className="w-3 h-3" />
-                                  {formatDate(photo.uploadedAt)}
+                                  {formatDate(photo.dateTaken || photo.uploadedAt)}
                                 </span>
                               </div>
                             </div>
