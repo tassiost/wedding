@@ -605,16 +605,17 @@ app.get('/api/photos/zip', async (req, res) => {
     });
     archive.pipe(res);
 
-    // ponytail: sequential fetch keeps memory low; parallel would need a pool cap
+    // ponytail: fetch via public R2 URL with node-fetch instead of S3 GetObject
+    // ponytail: S3 SDK hangs from Render Frankfurt; node-fetch already works for GitHub API
     // ponytail: index prefix avoids duplicate-filename collisions (guests upload same IMG_xxxx)
     for (let i = 0; i < photos.length; i++) {
       const photo = photos[i];
       try {
-        const getCmd = new GetObjectCommand({ Bucket: R2_BUCKET_NAME, Key: photo.r2Key });
-        const r2res = await s3Client.send(getCmd);
+        const r2res = await fetch(photo.r2Url);
+        if (!r2res.ok) throw new Error(`R2 fetch ${r2res.status}`);
         const baseName = photo.filename || photo.r2Key.split('/').pop() || `${photo.id}.bin`;
         const name = `${String(i + 1).padStart(3, '0')}-${baseName}`;
-        archive.append(r2res.Body, { name });
+        archive.append(r2res.body, { name });
       } catch (err) {
         console.error('Skip photo in zip:', photo.r2Key, err.message);
       }
