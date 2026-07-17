@@ -25,6 +25,7 @@ export default function Gallery() {
   const [showComments, setShowComments] = useState(false);
   const [isLiking, setIsLiking] = useState(false);
   const [isPostingComment, setIsPostingComment] = useState(false);
+  const [isZipping, setIsZipping] = useState(false);
 
   const showToast = (message: string) => {
     setToast({ message, visible: true });
@@ -81,6 +82,31 @@ export default function Gallery() {
     await loadPhotos();
     setIsRefreshing(false);
     showToast('Gallery refreshed');
+  };
+
+  const handleDownloadAll = async () => {
+    if (isZipping || photos.length === 0) return;
+    setIsZipping(true);
+    try {
+      const apiBase = import.meta.env.VITE_API_URL || 'https://wedding-backend-6g10.onrender.com';
+      const res = await fetch(`${apiBase}/api/photos/zip`);
+      if (!res.ok) throw new Error('Zip failed');
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'wedding-photos.zip';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      showToast('Downloaded all photos');
+    } catch (err) {
+      console.error('Download all failed:', err);
+      showToast('Download all failed');
+    } finally {
+      setIsZipping(false);
+    }
   };
 
   const openLightbox = (photo: typeof photos[0], index: number) => {
@@ -313,6 +339,15 @@ export default function Gallery() {
               title="Refresh gallery"
             >
               <RefreshCw className={`w-4 h-4 text-[#6b6b6b] ${isRefreshing ? 'animate-spin' : ''}`} />
+            </button>
+            <button
+              onClick={handleDownloadAll}
+              disabled={isZipping || photos.length === 0}
+              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-semibold text-white bg-[#2c2c2c] hover:bg-[#c9a96e] transition-all duration-200 disabled:opacity-50"
+              title="Download all photos as zip"
+            >
+              {isZipping ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+              {isZipping ? 'Zipping...' : 'Download All'}
             </button>
             <Link
               to="/upload"

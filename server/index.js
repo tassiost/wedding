@@ -1,6 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const fetch = require('node-fetch');
+const archiver = require('archiver');
 const { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand } = require('@aws-sdk/client-s3');
 
 const app = express();
@@ -575,6 +576,53 @@ app.post('/api/photos/:id/comments', async (req, res) => {
   } catch (error) {
     console.error('Error adding comment:', error);
     res.status(500).json({ error: 'Failed to add comment' });
+  }
+});
+
+// Download all photos as zip
+app.get('/api/photos/zip', async (req, res) => {
+  try {
+    const response = await fetch(
+      `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${PHOTOS_FILE_PATH}?ref=${BRANCH}`,
+      { headers: getHeaders() }
+    );
+    if (!response.ok) {
+      throw new Error('Failed to fetch photos');
+    }
+    const fileData = await response.json();
+    const content = Buffer.from(fileData.content, 'base64').toString('utf-8');
+    const data = JSON.parse(content);
+    const photos = (data.photos || []).filter(p => p.r2Key);
+
+    res.setHeader('Content-Type', 'application/zip');
+    res.setHeader('Content-Disposition', 'attachment; filename="wedding-photos.zip"');
+
+    const archive = archiver('zip', { zlib: { level: 5 } });
+    archive.on('error', err => {
+      console.error('Archive error:', err);
+      if (!res.headersSent) res.status(500).json({ error: 'Zip failed' });
+      archive.abort();
+    });
+    archive.pipe(res);
+
+    // ponytail: sequential fetch keeps memory low; parallel would need a pool cap
+    // ponytail: index prefix avoids duplicate-filename collisions (guests upload same IMG_xxxx)
+    for (let i = 0; i < photos.length; i++) {
+      const photo = photos[i];
+      try {
+        const getCmd = new GetObjectCommand({ Bucket: R2_BUCKET_NAME, Key: photo.r2Key });
+        const r2res = await s3Client.send(getCmd);
+        const baseName = photo.filename || photo.r2Key.split('/').pop() || `${photo.id}.bin`;
+        const name = `${String(i + 1).padStart(3, '0')}-${baseName}`;
+        archive.append(r2res.Body, { name });
+      } catch (err) {
+        console.error('Skip photo in zip:', photo.r2Key, err.message);
+      }
+    }
+    await archive.finalize();
+  } catch (error) {
+    console.error('Error building zip:', error);
+    if (!res.headersSent) res.status(500).json({ error: 'Failed to build zip' });
   }
 });
 
