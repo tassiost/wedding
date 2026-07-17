@@ -100,8 +100,8 @@ export default function Upload() {
     try {
       // Compress images before upload (skip videos)
       const compressionOptions = {
-        maxSizeMB: 1,
-        maxWidthOrHeight: 1920,
+        maxSizeMB: 5,
+        maxWidthOrHeight: 2560,
         useWebWorker: true,
       };
 
@@ -182,8 +182,8 @@ export default function Upload() {
 
     try {
       const compressionOptions = {
-        maxSizeMB: 1,
-        maxWidthOrHeight: 1920,
+        maxSizeMB: 5,
+        maxWidthOrHeight: 2560,
         useWebWorker: true,
       };
 
