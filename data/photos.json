@@ -19,10 +19,8 @@
           "longitude": 7.979161111111111
         }
       },
-      "likedBy": [
-        "RenderTest"
-      ],
-      "likes": 1,
+      "likedBy": [],
+      "likes": 0,
       "comments": [
         {
           "id": "1784280606600-lkksam76u",
@@ -3295,5 +3293,5 @@
       }
     }
   ],
-  "lastUpdated": "2026-07-17T09:32:13.322Z"
+  "lastUpdated": "2026-07-17T09:32:14.799Z"
 }
