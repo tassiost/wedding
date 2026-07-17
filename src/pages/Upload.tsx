@@ -321,7 +321,7 @@ export default function Upload() {
             Drop photos or videos here
           </h3>
           <p className="text-[#6b6b6b] text-sm">
-            or click to browse (up to 20 files, 10MB each)
+            or click to browse (no limit, 10MB each)
           </p>
           <input
             ref={fileInputRef}
