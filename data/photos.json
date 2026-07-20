@@ -1,6 +1,18 @@
 {
   "photos": [
     {
+      "id": "1784575098649-1iukt1dfg",
+      "filename": "IMG-20260715-WA0016.jpg",
+      "caption": "",
+      "guestName": "Victoria",
+      "uploadedAt": "2026-07-20T19:18:18.649Z",
+      "dateTaken": "2026-07-20T19:18:18.649Z",
+      "r2Url": "https://pub-bb9444735bc44da9934152376e2dc0de.r2.dev/1784575097448-n85swx74s-IMG-20260715-WA0016.jpg",
+      "r2Key": "1784575097448-n85swx74s-IMG-20260715-WA0016.jpg",
+      "fileSize": 1420061,
+      "metadata": {}
+    },
+    {
       "id": "1784056449943-hnrtikczp",
       "filename": "IMG_1765.jpeg",
       "caption": "",
@@ -3293,5 +3305,5 @@
       }
     }
   ],
-  "lastUpdated": "2026-07-17T09:32:14.799Z"
+  "lastUpdated": "2026-07-20T19:18:18.649Z"
 }
