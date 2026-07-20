@@ -1,6 +1,18 @@
 {
   "photos": [
     {
+      "id": "1784577227860-fd1jk1a3y",
+      "filename": "IMG-20260720-WA0014.jpg",
+      "caption": "",
+      "guestName": "Alex",
+      "uploadedAt": "2026-07-20T19:53:47.860Z",
+      "dateTaken": "2026-07-20T19:53:47.860Z",
+      "r2Url": "https://pub-bb9444735bc44da9934152376e2dc0de.r2.dev/1784577227224-xj3vnm745-IMG-20260720-WA0014.jpg",
+      "r2Key": "1784577227224-xj3vnm745-IMG-20260720-WA0014.jpg",
+      "fileSize": 603529,
+      "metadata": {}
+    },
+    {
       "id": "1784575105374-aa29le4ix",
       "filename": "IMG-20260715-WA0011.jpg",
       "caption": "",
@@ -3329,5 +3341,5 @@
       }
     }
   ],
-  "lastUpdated": "2026-07-20T19:18:25.374Z"
+  "lastUpdated": "2026-07-20T19:53:47.860Z"
 }
