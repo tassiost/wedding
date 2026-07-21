@@ -1,6 +1,22 @@
 {
   "photos": [
     {
+      "id": "1784619809456-bapmtzrt2",
+      "filename": "Screenshot_20260713_222509_Samsung Browser.jpg",
+      "caption": "",
+      "guestName": "Victoria",
+      "uploadedAt": "2026-07-21T07:43:29.456Z",
+      "dateTaken": "2026-07-13T20:25:09.000Z",
+      "r2Url": "https://pub-bb9444735bc44da9934152376e2dc0de.r2.dev/1784619808671-wledl7f9k-Screenshot_20260713_222509_Samsung Browser.jpg",
+      "r2Key": "1784619808671-wledl7f9k-Screenshot_20260713_222509_Samsung Browser.jpg",
+      "fileSize": 701196,
+      "metadata": {
+        "dateTaken": "2026-07-13T20:25:09.000Z",
+        "width": 1080,
+        "height": 2400
+      }
+    },
+    {
       "id": "1784617982272-2cnb051m4",
       "filename": "IMG_3884.jpeg",
       "caption": "",
@@ -3814,5 +3830,5 @@
       }
     }
   ],
-  "lastUpdated": "2026-07-21T07:13:02.273Z"
+  "lastUpdated": "2026-07-21T07:43:29.456Z"
 }
