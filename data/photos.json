@@ -1,6 +1,26 @@
 {
   "photos": [
     {
+      "id": "1784617977355-9vbviqxze",
+      "filename": "IMG_3878.jpeg",
+      "caption": "",
+      "guestName": "Ju",
+      "uploadedAt": "2026-07-21T07:12:57.355Z",
+      "dateTaken": "2026-06-27T23:36:29.000Z",
+      "r2Url": "https://pub-bb9444735bc44da9934152376e2dc0de.r2.dev/1784617976531-kebmb8901-IMG_3878.jpeg",
+      "r2Key": "1784617976531-kebmb8901-IMG_3878.jpeg",
+      "fileSize": 811127,
+      "metadata": {
+        "dateTaken": "2026-06-27T23:36:29.000Z",
+        "camera": "Apple iPhone 17 Pro Max",
+        "lens": "iPhone 17 Pro Max back triple camera 6.765mm f/1.78",
+        "location": {
+          "latitude": 44.78867222222222,
+          "longitude": 7.979044444444445
+        }
+      }
+    },
+    {
       "id": "1784617973663-grlvjbkiz",
       "filename": "IMG_3782.jpeg",
       "caption": "",
@@ -3774,5 +3794,5 @@
       }
     }
   ],
-  "lastUpdated": "2026-07-21T07:12:53.663Z"
+  "lastUpdated": "2026-07-21T07:12:57.355Z"
 }
