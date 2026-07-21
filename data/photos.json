@@ -1,6 +1,23 @@
 {
   "photos": [
     {
+      "id": "1784627062669-zmrum94ya",
+      "filename": "20260625_152734.mp4",
+      "caption": "",
+      "guestName": "Victoria",
+      "uploadedAt": "2026-07-21T09:44:22.669Z",
+      "dateTaken": "2026-06-25T13:27:40.397Z",
+      "r2Url": "https://pub-bb9444735bc44da9934152376e2dc0de.r2.dev/1784627060798-p8lz2kaae-20260625_152734.mp4",
+      "r2Key": "1784627060798-p8lz2kaae-20260625_152734.mp4",
+      "fileSize": 18042446,
+      "metadata": {
+        "dateTaken": "2026-06-25T13:27:40.397Z",
+        "duration": 5.122125,
+        "width": 1080,
+        "height": 1920
+      }
+    },
+    {
       "id": "1784627053526-k8m6rf7e8",
       "filename": "20260626_093400.jpg",
       "caption": "",
@@ -5058,5 +5075,5 @@
       }
     }
   ],
-  "lastUpdated": "2026-07-21T09:44:13.526Z"
+  "lastUpdated": "2026-07-21T09:44:22.669Z"
 }
