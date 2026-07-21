@@ -1,6 +1,26 @@
 {
   "photos": [
     {
+      "id": "1784657272977-qyxbmwqcn",
+      "filename": "IMG_6183.jpeg",
+      "caption": "",
+      "guestName": "Carlos Vitón ",
+      "uploadedAt": "2026-07-21T18:07:52.977Z",
+      "dateTaken": "2026-06-27T23:32:44.000Z",
+      "r2Url": "https://pub-bb9444735bc44da9934152376e2dc0de.r2.dev/1784657271874-spx1amjxq-IMG_6183.jpeg",
+      "r2Key": "1784657271874-spx1amjxq-IMG_6183.jpeg",
+      "fileSize": 1594494,
+      "metadata": {
+        "dateTaken": "2026-06-27T23:32:44.000Z",
+        "camera": "Apple iPhone 13",
+        "lens": "iPhone 13 front camera 2.71mm f/2.2",
+        "location": {
+          "latitude": 44.788325,
+          "longitude": 7.979711111111111
+        }
+      }
+    },
+    {
       "id": "1784657267094-hciq9qaom",
       "filename": "IMG_6184.jpeg",
       "caption": "",
@@ -5164,5 +5184,5 @@
       }
     }
   ],
-  "lastUpdated": "2026-07-21T18:07:47.094Z"
+  "lastUpdated": "2026-07-21T18:07:52.977Z"
 }
