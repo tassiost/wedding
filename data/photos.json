@@ -1,6 +1,21 @@
 {
   "photos": [
     {
+      "id": "1784630633608-wy3jblg4j",
+      "filename": "000027780013.jpeg",
+      "caption": "",
+      "guestName": "Anonymous",
+      "uploadedAt": "2026-07-21T10:43:53.608Z",
+      "dateTaken": "2026-07-14T11:02:27.000Z",
+      "r2Url": "https://pub-bb9444735bc44da9934152376e2dc0de.r2.dev/1784630632897-oxyrbrkqx-000027780013.jpeg",
+      "r2Key": "1784630632897-oxyrbrkqx-000027780013.jpeg",
+      "fileSize": 2095293,
+      "metadata": {
+        "dateTaken": "2026-07-14T11:02:27.000Z",
+        "camera": "NORITSU KOKI EZ Controller"
+      }
+    },
+    {
       "id": "1784630623943-jtqvp1qkx",
       "filename": "000027780012.jpeg",
       "caption": "",
@@ -5089,5 +5104,5 @@
       }
     }
   ],
-  "lastUpdated": "2026-07-21T10:43:43.943Z"
+  "lastUpdated": "2026-07-21T10:43:53.608Z"
 }
