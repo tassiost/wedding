@@ -1,6 +1,22 @@
 {
   "photos": [
     {
+      "id": "1784619819762-75u1qkuqh",
+      "filename": "Screenshot_20260628_234424_Instagram.jpg",
+      "caption": "",
+      "guestName": "Victoria",
+      "uploadedAt": "2026-07-21T07:43:39.762Z",
+      "dateTaken": "2026-06-28T21:44:24.000Z",
+      "r2Url": "https://pub-bb9444735bc44da9934152376e2dc0de.r2.dev/1784619819046-319b9u1d9-Screenshot_20260628_234424_Instagram.jpg",
+      "r2Key": "1784619819046-319b9u1d9-Screenshot_20260628_234424_Instagram.jpg",
+      "fileSize": 449570,
+      "metadata": {
+        "dateTaken": "2026-06-28T21:44:24.000Z",
+        "width": 1080,
+        "height": 2400
+      }
+    },
+    {
       "id": "1784619816211-dtsq4s0rh",
       "filename": "Screenshot_20260628_234435_Instagram.jpg",
       "caption": "",
@@ -3862,5 +3878,5 @@
       }
     }
   ],
-  "lastUpdated": "2026-07-21T07:43:36.211Z"
+  "lastUpdated": "2026-07-21T07:43:39.762Z"
 }
