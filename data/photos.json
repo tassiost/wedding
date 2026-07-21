@@ -1,6 +1,26 @@
 {
   "photos": [
     {
+      "id": "1784662448763-yhhjgslh8",
+      "filename": "IMG_9899.jpeg",
+      "caption": "",
+      "guestName": "Anonymous",
+      "uploadedAt": "2026-07-21T19:34:08.763Z",
+      "dateTaken": "2026-06-28T09:19:03.000Z",
+      "r2Url": "https://pub-bb9444735bc44da9934152376e2dc0de.r2.dev/1784662448132-xvh7bmzo0-IMG_9899.jpeg",
+      "r2Key": "1784662448132-xvh7bmzo0-IMG_9899.jpeg",
+      "fileSize": 1785229,
+      "metadata": {
+        "dateTaken": "2026-06-28T09:19:03.000Z",
+        "camera": "Apple iPhone 15",
+        "lens": "iPhone 15 back dual wide camera 5.96mm f/1.6",
+        "location": {
+          "latitude": 44.788830555555556,
+          "longitude": 7.978875
+        }
+      }
+    },
+    {
       "id": "1784662440866-qahb16648",
       "filename": "IMG_9902.jpeg",
       "caption": "",
@@ -5204,5 +5224,5 @@
       }
     }
   ],
-  "lastUpdated": "2026-07-21T19:34:00.866Z"
+  "lastUpdated": "2026-07-21T19:34:08.763Z"
 }
