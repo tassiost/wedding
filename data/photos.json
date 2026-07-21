@@ -1,6 +1,23 @@
 {
   "photos": [
     {
+      "id": "1784619851894-teniefane",
+      "filename": "20260628_115949.jpg",
+      "caption": "",
+      "guestName": "Victoria",
+      "uploadedAt": "2026-07-21T07:44:11.894Z",
+      "dateTaken": "2026-06-28T09:59:50.000Z",
+      "r2Url": "https://pub-bb9444735bc44da9934152376e2dc0de.r2.dev/1784619851304-uscp26zxi-20260628_115949.jpg",
+      "r2Key": "1784619851304-uscp26zxi-20260628_115949.jpg",
+      "fileSize": 1795456,
+      "metadata": {
+        "dateTaken": "2026-06-28T09:59:50.000Z",
+        "camera": "samsung SM-G991B",
+        "width": 4032,
+        "height": 2268
+      }
+    },
+    {
       "id": "1784619847852-n2lct95pk",
       "filename": "20260628_122841.jpg",
       "caption": "",
@@ -3980,5 +3997,5 @@
       }
     }
   ],
-  "lastUpdated": "2026-07-21T07:44:07.852Z"
+  "lastUpdated": "2026-07-21T07:44:11.894Z"
 }
