@@ -1,6 +1,23 @@
 {
   "photos": [
     {
+      "id": "1784620103262-ibjwecjkl",
+      "filename": "20260627_142838.jpg",
+      "caption": "",
+      "guestName": "Victoria",
+      "uploadedAt": "2026-07-21T07:48:23.262Z",
+      "dateTaken": "2026-06-27T12:28:38.000Z",
+      "r2Url": "https://pub-bb9444735bc44da9934152376e2dc0de.r2.dev/1784620102501-29h3o8t5l-20260627_142838.jpg",
+      "r2Key": "1784620102501-29h3o8t5l-20260627_142838.jpg",
+      "fileSize": 2270167,
+      "metadata": {
+        "dateTaken": "2026-06-27T12:28:38.000Z",
+        "camera": "samsung SM-G991B",
+        "width": 4032,
+        "height": 2268
+      }
+    },
+    {
       "id": "1784620099504-40qt3uqgo",
       "filename": "20260627_142842.jpg",
       "caption": "",
@@ -4267,5 +4284,5 @@
       }
     }
   ],
-  "lastUpdated": "2026-07-21T07:48:19.504Z"
+  "lastUpdated": "2026-07-21T07:48:23.262Z"
 }
