@@ -1,6 +1,26 @@
 {
   "photos": [
     {
+      "id": "1784664497252-cujpp1l51",
+      "filename": "IMG_7522.jpeg",
+      "caption": "",
+      "guestName": "Ellina",
+      "uploadedAt": "2026-07-21T20:08:17.252Z",
+      "dateTaken": "2026-06-28T06:30:22.000Z",
+      "r2Url": "https://pub-bb9444735bc44da9934152376e2dc0de.r2.dev/1784664496541-n9k8fenjj-IMG_7522.jpeg",
+      "r2Key": "1784664496541-n9k8fenjj-IMG_7522.jpeg",
+      "fileSize": 1406598,
+      "metadata": {
+        "dateTaken": "2026-06-28T06:30:22.000Z",
+        "camera": "Apple iPhone 14 Pro Max",
+        "lens": "iPhone 14 Pro Max back triple camera 6.86mm f/1.78",
+        "location": {
+          "latitude": 44.788666666666664,
+          "longitude": 7.979197222222222
+        }
+      }
+    },
+    {
       "id": "1784664492452-3xt38zlaa",
       "filename": "IMG_7520.jpeg",
       "caption": "",
@@ -5813,5 +5833,5 @@
       }
     }
   ],
-  "lastUpdated": "2026-07-21T20:08:12.452Z"
+  "lastUpdated": "2026-07-21T20:08:17.252Z"
 }
