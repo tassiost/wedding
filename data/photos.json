@@ -1,6 +1,22 @@
 {
   "photos": [
     {
+      "id": "1784698805660-elezi83nl",
+      "filename": "IMG_6498.jpeg",
+      "caption": "",
+      "guestName": "Anonymous",
+      "uploadedAt": "2026-07-22T05:40:05.660Z",
+      "dateTaken": "2026-06-27T17:51:06.000Z",
+      "r2Url": "https://pub-bb9444735bc44da9934152376e2dc0de.r2.dev/1784698805118-t4r53tnls-IMG_6498.jpeg",
+      "r2Key": "1784698805118-t4r53tnls-IMG_6498.jpeg",
+      "fileSize": 678599,
+      "metadata": {
+        "dateTaken": "2026-06-27T17:51:06.000Z",
+        "camera": "Apple iPhone 16",
+        "lens": "iPhone 16 front TrueDepth camera 2.69mm f/1.9"
+      }
+    },
+    {
       "id": "1784697094582-uu1j04cda",
       "filename": "IMG_0763.jpeg",
       "caption": "",
@@ -5985,5 +6001,5 @@
       }
     }
   ],
-  "lastUpdated": "2026-07-22T05:11:34.582Z"
+  "lastUpdated": "2026-07-22T05:40:05.660Z"
 }
