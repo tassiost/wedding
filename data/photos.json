@@ -1,6 +1,22 @@
 {
   "photos": [
     {
+      "id": "1784697082546-6gd6b6unn",
+      "filename": "IMG_0773.jpeg",
+      "caption": "",
+      "guestName": "Marc",
+      "uploadedAt": "2026-07-22T05:11:22.546Z",
+      "dateTaken": "2026-06-27T16:20:40.000Z",
+      "r2Url": "https://pub-bb9444735bc44da9934152376e2dc0de.r2.dev/1784697081266-vfd1jkfgh-IMG_0773.jpeg",
+      "r2Key": "1784697081266-vfd1jkfgh-IMG_0773.jpeg",
+      "fileSize": 4823263,
+      "metadata": {
+        "dateTaken": "2026-06-27T16:20:40.000Z",
+        "camera": "Apple iPhone 16 Pro",
+        "lens": "iPhone 16 Pro back triple camera 6.765mm f/1.78"
+      }
+    },
+    {
       "id": "1784697076670-pfng5xuhr",
       "filename": "IMG_0779.jpeg",
       "caption": "",
@@ -5921,5 +5937,5 @@
       }
     }
   ],
-  "lastUpdated": "2026-07-22T05:11:16.670Z"
+  "lastUpdated": "2026-07-22T05:11:22.546Z"
 }
