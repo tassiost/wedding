@@ -1,6 +1,23 @@
 {
   "photos": [
     {
+      "id": "1784821474311-fpppfpvgu",
+      "filename": "1000114520.jpg",
+      "caption": "",
+      "guestName": "Adriana ",
+      "uploadedAt": "2026-07-23T15:44:34.311Z",
+      "dateTaken": "2026-06-27T17:48:12.000Z",
+      "r2Url": "https://pub-bb9444735bc44da9934152376e2dc0de.r2.dev/1784821473003-o4zwdikyq-1000114520.jpg",
+      "r2Key": "1784821473003-o4zwdikyq-1000114520.jpg",
+      "fileSize": 2134125,
+      "metadata": {
+        "dateTaken": "2026-06-27T17:48:12.000Z",
+        "camera": "samsung Galaxy S23",
+        "width": 4000,
+        "height": 3000
+      }
+    },
+    {
       "id": "1784746643149-bdxo8tsjd",
       "filename": "IMG_0715.jpeg",
       "caption": "",
@@ -6454,5 +6471,5 @@
       }
     }
   ],
-  "lastUpdated": "2026-07-22T18:57:23.149Z"
+  "lastUpdated": "2026-07-23T15:44:34.311Z"
 }
