@@ -512,7 +512,8 @@ app.get('/api/photos/zip', async (req, res) => {
     res.setHeader('Content-Type', 'application/zip');
     res.setHeader('Content-Disposition', 'attachment; filename="wedding-photos.zip"');
 
-    const archive = archiver('zip', { zlib: { level: 5 } });
+    // ponytail: level 0 (store) — JPEGs/videos are already compressed, zlib just burns CPU/RAM
+    const archive = archiver('zip', { zlib: { level: 0 } });
     archive.on('error', err => {
       console.error('Archive error:', err);
       if (!res.headersSent) res.status(500).json({ error: 'Zip failed' });
@@ -530,7 +531,8 @@ app.get('/api/photos/zip', async (req, res) => {
         if (!r2res.ok) throw new Error(`R2 fetch ${r2res.status}`);
         const baseName = photo.filename || photo.r2Key.split('/').pop() || `${photo.id}.bin`;
         const name = `${String(i + 1).padStart(3, '0')}-${baseName}`;
-        archive.append(r2res.body, { name });
+        // ponytail: pass size so archiver streams the body instead of buffering to compute length
+        archive.append(r2res.body, { name, size: photo.fileSize });
       } catch (err) {
         console.error('Skip photo in zip:', photo.r2Key, err.message);
       }
