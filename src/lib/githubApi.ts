@@ -8,13 +8,34 @@ interface PhotosData {
   lastUpdated: string;
 }
 
+// ponytail: ETag cache — 304 responses from GitHub don't count against rate limit
+let photosETag: string | null = null;
+let cachedPhotos: Photo[] = [];
+
 export async function fetchPhotos(config: GitHubConfig): Promise<Photo[]> {
-  const response = await fetch(`${API_BASE_URL}/api/photos`);
+  const headers: Record<string, string> = {};
+  if (photosETag) {
+    headers['If-None-Match'] = photosETag;
+  }
+
+  const response = await fetch(`${API_BASE_URL}/api/photos`, { headers });
+
+  if (response.status === 304) {
+    return cachedPhotos;
+  }
+
   if (!response.ok) {
     throw new Error(`Failed to fetch photos: ${response.statusText}`);
   }
+
+  const etag = response.headers.get('etag');
+  if (etag) {
+    photosETag = etag;
+  }
+
   const data: PhotosData = await response.json();
-  return data.photos || [];
+  cachedPhotos = data.photos || [];
+  return cachedPhotos;
 }
 
 export async function uploadPhoto(

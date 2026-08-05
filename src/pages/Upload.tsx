@@ -238,10 +238,12 @@ export default function Upload() {
         showToast(`${result.successCount} retried successfully, ${result.failedFiles.length} still failed.`);
       } else {
         showToast('All failed photos uploaded successfully!');
-        // Clean up successful photos
-        const remainingPreviews = previews.filter(p => p.status !== 'success');
-        remainingPreviews.forEach(p => URL.revokeObjectURL(p.preview));
-        setPreviews(remainingPreviews);
+        // ponytail: use functional setState to avoid stale closure — previews was captured at function call time
+        setPreviews(prev => {
+          const remaining = prev.filter(p => p.status !== 'success');
+          prev.filter(p => p.status === 'success').forEach(p => URL.revokeObjectURL(p.preview));
+          return remaining;
+        });
       }
     } catch (error) {
       console.error('Retry failed:', error);

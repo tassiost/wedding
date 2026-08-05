@@ -46,13 +46,13 @@ export default function Gallery() {
     }
   }, [location.state, isAuthenticated, navigate, location.pathname]);
 
-  // Poll for new photos every 10 seconds
+  // Poll for new photos every 30 seconds (reduced from 10s to avoid GitHub rate limits)
   useEffect(() => {
     if (!isAuthenticated) return;
 
     const interval = setInterval(() => {
       loadPhotos();
-    }, 10000);
+    }, 30000);
 
     return () => clearInterval(interval);
   }, [isAuthenticated, loadPhotos]);
@@ -83,10 +83,22 @@ export default function Gallery() {
     showToast('Gallery refreshed');
   };
 
-  const handleDownloadAll = () => {
+  const handleDownloadAll = async () => {
     if (photos.length === 0) return;
     const apiBase = import.meta.env.VITE_API_URL || 'https://wedding-backend-6g10.onrender.com';
-    window.location.href = `${apiBase}/api/photos/zip`;
+    try {
+      // ponytail: check if zip is ready before redirecting (avoids raw 503 JSON in browser)
+      const check = await fetch(`${apiBase}/api/photos/zip`, { method: 'HEAD', redirect: 'manual' });
+      if (check.status === 503) {
+        showToast('Zip is being prepared — try again in a moment');
+        return;
+      }
+      // 302 redirect — follow it to download
+      window.location.href = `${apiBase}/api/photos/zip`;
+    } catch {
+      // Fallback: just try the redirect directly
+      window.location.href = `${apiBase}/api/photos/zip`;
+    }
   };
 
   const openLightbox = (photo: typeof photos[0], index: number) => {

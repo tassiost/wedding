@@ -15,9 +15,10 @@ app.use(cors());
 app.use(express.json({ limit: '1mb' })); // JSON endpoints only (like/comment); uploads use multipart
 
 // Multipart upload config — disk storage keeps memory flat for large videos
+// ponytail: 200MB limit prevents disk fill on Render free tier (1GB disk) with concurrent uploads
 const upload = multer({
   dest: path.join(os.tmpdir(), 'wedding-uploads'),
-  limits: { fileSize: 500 * 1024 * 1024 }, // 500MB max per file
+  limits: { fileSize: 200 * 1024 * 1024 }, // 200MB max per file
 });
 
 const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
@@ -201,13 +202,23 @@ function checkR2Limits(usage, additionalStorageBytes = 0) {
   };
 }
 
-// Fetch photos from GitHub
+// Fetch photos from GitHub (with ETag caching — 304 responses don't count against rate limit)
 app.get('/api/photos', async (req, res) => {
   try {
+    const ghHeaders = getHeaders();
+    // ponytail: forward client's If-None-Match to GitHub for ETag caching
+    if (req.headers['if-none-match']) {
+      ghHeaders['If-None-Match'] = req.headers['if-none-match'];
+    }
+
     const response = await fetch(
       `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${PHOTOS_FILE_PATH}?ref=${BRANCH}`,
-      { headers: getHeaders() }
+      { headers: ghHeaders }
     );
+
+    if (response.status === 304) {
+      return res.status(304).end();
+    }
 
     if (response.status === 404) {
       return res.json({ photos: [] });
@@ -218,6 +229,10 @@ app.get('/api/photos', async (req, res) => {
     }
 
     const fileData = await response.json();
+    // ponytail: forward ETag to client for future conditional requests
+    if (response.headers.get('etag')) {
+      res.setHeader('ETag', response.headers.get('etag'));
+    }
     const content = Buffer.from(fileData.content, 'base64').toString('utf-8');
     const data = JSON.parse(content);
     res.json(data);
@@ -552,6 +567,7 @@ app.post('/api/photos/:id/comments', async (req, res) => {
 // Called on startup and after each upload/delete (fire-and-forget)
 let zipBuilding = false;
 let zipPending = false;
+let zipReady = false; // true once at least one successful build completes
 
 // ponytail: if a rebuild is requested while one is in progress, mark pending
 // and run again after the current one finishes — so burst uploads aren't missed
@@ -609,6 +625,7 @@ async function rebuildZipCache() {
       ContentType: 'application/zip',
     }));
     console.log('Zip cache uploaded to R2');
+    zipReady = true;
   } catch (error) {
     console.error('Error rebuilding zip cache:', error.message);
   } finally {
@@ -623,8 +640,12 @@ async function rebuildZipCache() {
 }
 
 // Download all photos as zip — redirects to pre-built cache on R2 (instant, no timeout)
-// While rebuilding, serve the stale cache (still has all previous photos) rather than 503
+// If zip isn't built yet (cold start), return 503 so frontend can show "preparing" message
+// While rebuilding, serve the stale cache (still has all previous photos)
 app.get('/api/photos/zip', (req, res) => {
+  if (!zipReady) {
+    return res.status(503).json({ error: 'Zip is being prepared, please try again in a moment', retry: true });
+  }
   res.redirect(302, `${R2_PUBLIC_URL}/${ZIP_CACHE_KEY}`);
 });
 
