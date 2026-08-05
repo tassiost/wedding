@@ -25,7 +25,7 @@ export default function Gallery() {
   const [showComments, setShowComments] = useState(false);
   const [isLiking, setIsLiking] = useState(false);
   const [isPostingComment, setIsPostingComment] = useState(false);
-  const [downloadState, setDownloadState] = useState<'idle' | 'preparing' | 'downloading' | 'done'>('idle');
+  const [downloadState, setDownloadState] = useState<'idle' | 'preparing' | 'downloading' | 'started' | 'done'>('idle');
   const [downloadProgress, setDownloadProgress] = useState(0); // 0-100
   const [downloadSpeed, setDownloadSpeed] = useState(0); // MB/s
 
@@ -89,6 +89,8 @@ export default function Gallery() {
   const handleDownloadAll = async () => {
     if (photos.length === 0 || downloadState !== 'idle') return;
     const apiBase = import.meta.env.VITE_API_URL || 'https://wedding-backend-6g10.onrender.com';
+    const totalSizeMB = photos.reduce((sum, p) => sum + (p.fileSize || 0), 0) / (1024 * 1024);
+    const sizeLabel = totalSizeMB > 1024 ? `${(totalSizeMB / 1024).toFixed(1)}GB` : `${totalSizeMB.toFixed(0)}MB`;
 
     setDownloadState('preparing');
     setDownloadProgress(0);
@@ -102,51 +104,67 @@ export default function Gallery() {
       }
       const { url } = await infoRes.json();
 
-      // Fetch directly from R2 with streaming progress
+      // Try streaming download directly from R2 (requires CORS on R2 bucket)
+      // If CORS is not configured (e.g. r2.dev public URL), fall back to redirect
       setDownloadState('downloading');
-      const response = await fetch(url);
-      if (!response.ok) throw new Error(`R2 fetch failed: ${response.status}`);
+      try {
+        const response = await fetch(url);
+        if (!response.ok) throw new Error(`R2 fetch failed: ${response.status}`);
 
-      const contentLength = parseInt(response.headers.get('content-length') || '0', 10);
-      const totalMB = contentLength / (1024 * 1024);
-      const sizeLabel = totalMB > 1024 ? `${(totalMB / 1024).toFixed(1)}GB` : `${totalMB.toFixed(0)}MB`;
+        const contentLength = parseInt(response.headers.get('content-length') || '0', 10);
+        if (!contentLength) throw new Error('No content-length');
 
-      const reader = response.body?.getReader();
-      if (!reader) throw new Error('Streaming not supported');
+        const reader = response.body?.getReader();
+        if (!reader) throw new Error('Streaming not supported');
 
-      const chunks: Uint8Array[] = [];
-      let received = 0;
-      const startTime = Date.now();
+        const chunks: Uint8Array[] = [];
+        let received = 0;
+        const startTime = Date.now();
 
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        chunks.push(value);
-        received += value.length;
-        const progress = contentLength > 0 ? Math.round((received / contentLength) * 100) : 0;
-        setDownloadProgress(progress);
-        const elapsedSec = (Date.now() - startTime) / 1000;
-        if (elapsedSec > 0) {
-          setDownloadSpeed(Math.round((received / (1024 * 1024)) / elapsedSec));
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          chunks.push(value);
+          received += value.length;
+          const progress = Math.round((received / contentLength) * 100);
+          setDownloadProgress(progress);
+          const elapsedSec = (Date.now() - startTime) / 1000;
+          if (elapsedSec > 0) {
+            setDownloadSpeed(Math.round((received / (1024 * 1024)) / elapsedSec));
+          }
         }
+
+        // Combine chunks into a blob and trigger download
+        const blob = new Blob(chunks, { type: 'application/zip' });
+        const blobUrl = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = blobUrl;
+        link.download = 'wedding-photos.zip';
+        link.style.display = 'none';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
+
+        setDownloadState('done');
+        setDownloadProgress(100);
+        showToast(`Download complete (${sizeLabel}). Check your downloads folder.`, 6000);
+        setTimeout(() => { setDownloadState('idle'); setDownloadProgress(0); }, 5000);
+      } catch (streamErr) {
+        // ponytail: CORS not configured on R2 (r2.dev doesn't support CORS).
+        // Fall back to direct redirect — browser handles download natively.
+        console.log('Streaming download not available, falling back to redirect:', streamErr.message);
+        setDownloadState('started');
+        showToast(`Download started (${sizeLabel}). Check your browser's download progress.`, 6000);
+        const link = document.createElement('a');
+        link.href = `${apiBase}/api/photos/zip`;
+        link.download = 'wedding-photos.zip';
+        link.style.display = 'none';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        setTimeout(() => setDownloadState('idle'), 8000);
       }
-
-      // Combine chunks into a blob and trigger download
-      const blob = new Blob(chunks, { type: 'application/zip' });
-      const blobUrl = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = blobUrl;
-      link.download = 'wedding-photos.zip';
-      link.style.display = 'none';
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
-
-      setDownloadState('done');
-      setDownloadProgress(100);
-      showToast(`Download complete (${sizeLabel}). Check your downloads folder.`, 6000);
-      setTimeout(() => { setDownloadState('idle'); setDownloadProgress(0); }, 5000);
     } catch (err) {
       console.error('Download failed:', err);
       showToast('Download failed. Please try again.');
@@ -399,7 +417,7 @@ export default function Gallery() {
               ) : (
                 <Download className="w-4 h-4" />
               )}
-              {downloadState === 'preparing' ? 'Preparing...' : downloadState === 'downloading' ? `${downloadProgress}%` : downloadState === 'done' ? 'Saved!' : 'Download All'}
+              {downloadState === 'preparing' ? 'Preparing...' : downloadState === 'downloading' ? `${downloadProgress}%` : downloadState === 'started' ? 'Download started!' : downloadState === 'done' ? 'Saved!' : 'Download All'}
             </button>
             <Link
               to="/upload"
@@ -411,8 +429,8 @@ export default function Gallery() {
           </div>
         </div>
 
-        {/* Download Progress Bar */}
-        {downloadState === 'downloading' && (
+        {/* Download Progress Bar — only show once streaming actually starts (CORS available) */}
+        {downloadState === 'downloading' && downloadProgress > 0 && (
           <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[2000] bg-white rounded-2xl shadow-[0_8px_40px_rgba(0,0,0,0.15)] p-5 min-w-[320px] max-w-[90vw]">
             <div className="flex items-center justify-between mb-2">
               <span className="text-sm font-semibold text-[#2c2c2c]">
