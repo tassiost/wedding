@@ -13,7 +13,7 @@ export default function Gallery() {
   const [lightboxCaption, setLightboxCaption] = useState('');
   const [lightboxMeta, setLightboxMeta] = useState('');
   const [lightboxIndex, setLightboxIndex] = useState(0);
-  const [toast, setToast] = useState({ message: '', visible: false });
+  const [toast, setToast] = useState({ message: '', visible: false, duration: 3000 });
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [photoCount, setPhotoCount] = useState(0);
   const [isSlideshow, setIsSlideshow] = useState(false);
@@ -25,9 +25,10 @@ export default function Gallery() {
   const [showComments, setShowComments] = useState(false);
   const [isLiking, setIsLiking] = useState(false);
   const [isPostingComment, setIsPostingComment] = useState(false);
+  const [downloadState, setDownloadState] = useState<'idle' | 'preparing' | 'started'>('idle');
 
-  const showToast = (message: string) => {
-    setToast({ message, visible: true });
+  const showToast = (message: string, duration = 3000) => {
+    setToast({ message, visible: true, duration });
   };
 
   // Load photos on mount
@@ -84,20 +85,35 @@ export default function Gallery() {
   };
 
   const handleDownloadAll = async () => {
-    if (photos.length === 0) return;
+    if (photos.length === 0 || downloadState !== 'idle') return;
     const apiBase = import.meta.env.VITE_API_URL || 'https://wedding-backend-6g10.onrender.com';
+    const totalSizeMB = photos.reduce((sum, p) => sum + (p.fileSize || 0), 0) / (1024 * 1024);
+    const sizeLabel = totalSizeMB > 1024 ? `${(totalSizeMB / 1024).toFixed(1)}GB` : `${totalSizeMB.toFixed(0)}MB`;
+
+    setDownloadState('preparing');
     try {
-      // ponytail: check if zip is ready before redirecting (avoids raw 503 JSON in browser)
+      // Check if zip is ready before triggering download
       const check = await fetch(`${apiBase}/api/photos/zip`, { method: 'HEAD', redirect: 'manual' });
       if (check.status === 503) {
         showToast('Zip is being prepared — try again in a moment');
+        setDownloadState('idle');
         return;
       }
-      // 302 redirect — follow it to download
-      window.location.href = `${apiBase}/api/photos/zip`;
+      // Trigger download via hidden anchor (doesn't navigate away from page)
+      setDownloadState('started');
+      showToast(`Download started (${sizeLabel}). Check your browser's download progress.`, 6000);
+      const link = document.createElement('a');
+      link.href = `${apiBase}/api/photos/zip`;
+      link.download = 'wedding-photos.zip';
+      link.style.display = 'none';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      // Reset button after 8 seconds so user can download again if needed
+      setTimeout(() => setDownloadState('idle'), 8000);
     } catch {
-      // Fallback: just try the redirect directly
-      window.location.href = `${apiBase}/api/photos/zip`;
+      showToast('Download failed. Please try again.');
+      setDownloadState('idle');
     }
   };
 
@@ -334,12 +350,16 @@ export default function Gallery() {
             </button>
             <button
               onClick={handleDownloadAll}
-              disabled={photos.length === 0}
+              disabled={photos.length === 0 || downloadState !== 'idle'}
               className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-semibold text-white bg-[#2c2c2c] hover:bg-[#c9a96e] transition-all duration-200 disabled:opacity-50"
               title="Download all photos as zip"
             >
-              <Download className="w-4 h-4" />
-              Download All
+              {downloadState !== 'idle' ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Download className="w-4 h-4" />
+              )}
+              {downloadState === 'preparing' ? 'Preparing...' : downloadState === 'started' ? 'Download started!' : 'Download All'}
             </button>
             <Link
               to="/upload"
@@ -778,6 +798,7 @@ export default function Gallery() {
       <Toast
         message={toast.message}
         visible={toast.visible}
+        duration={toast.duration}
         onHide={() => setToast(prev => ({ ...prev, visible: false }))}
       />
     </main>

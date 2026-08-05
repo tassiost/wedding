@@ -4,9 +4,10 @@ interface ToastProps {
   message: string;
   visible: boolean;
   onHide: () => void;
+  duration?: number; // ms before auto-hide, default 3000
 }
 
-export default function Toast({ message, visible, onHide }: ToastProps) {
+export default function Toast({ message, visible, onHide, duration = 3000 }: ToastProps) {
   const [show, setShow] = useState(false);
 
   useEffect(() => {
@@ -15,10 +16,10 @@ export default function Toast({ message, visible, onHide }: ToastProps) {
       const timer = setTimeout(() => {
         setShow(false);
         setTimeout(onHide, 300);
-      }, 3000);
+      }, duration);
       return () => clearTimeout(timer);
     }
-  }, [visible, onHide]);
+  }, [visible, onHide, duration]);
 
   if (!visible && !show) return null;
 
