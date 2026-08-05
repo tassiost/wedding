@@ -470,6 +470,9 @@ app.delete('/api/photos/:id', async (req, res) => {
     }
 
     res.json(result);
+
+    // Rebuild zip cache in background (fire-and-forget)
+    rebuildZipCache().catch(err => console.error('Zip rebuild after delete failed:', err.message));
   } catch (error) {
     if (error.message === 'NOT_FOUND') return res.status(404).json({ error: 'Photo not found' });
     console.error('Error deleting photo:', error);
@@ -546,11 +549,17 @@ app.post('/api/photos/:id/comments', async (req, res) => {
 
 // ponytail: Pre-build zip cache on R2 — eliminates Render request timeout
 // Streams zip to disk (not memory), then uploads to R2 as wedding-photos.zip
-// Called on startup and after each upload (fire-and-forget)
+// Called on startup and after each upload/delete (fire-and-forget)
 let zipBuilding = false;
+let zipPending = false;
 
+// ponytail: if a rebuild is requested while one is in progress, mark pending
+// and run again after the current one finishes — so burst uploads aren't missed
 async function rebuildZipCache() {
-  if (zipBuilding) return;
+  if (zipBuilding) {
+    zipPending = true;
+    return;
+  }
   zipBuilding = true;
   const tmpPath = path.join(os.tmpdir(), `wedding-photos-${Date.now()}.zip`);
   try {
@@ -605,15 +614,17 @@ async function rebuildZipCache() {
   } finally {
     zipBuilding = false;
     fs.unlink(tmpPath, () => {});
+    // ponytail: if uploads/deletes happened during this rebuild, run again
+    if (zipPending) {
+      zipPending = false;
+      rebuildZipCache().catch(err => console.error('Pending zip rebuild failed:', err.message));
+    }
   }
 }
 
 // Download all photos as zip — redirects to pre-built cache on R2 (instant, no timeout)
+// While rebuilding, serve the stale cache (still has all previous photos) rather than 503
 app.get('/api/photos/zip', (req, res) => {
-  if (zipBuilding) {
-    return res.status(503).json({ error: 'Zip is being rebuilt, please try again in a moment' });
-  }
-  // Redirect to R2 public URL — R2 serves directly, no Render request timeout
   res.redirect(302, `${R2_PUBLIC_URL}/${ZIP_CACHE_KEY}`);
 });
 
