@@ -6,7 +6,7 @@ import Toast from '@/components/Toast';
 import { likePhoto, addComment as addCommentApi } from '@/lib/githubApi';
 
 export default function Gallery() {
-  const { photos, loadPhotos, isLoading, isAuthenticated, githubConfig } = useApp();
+  const { photos, photosError, loadPhotos, isLoading, isAuthenticated, githubConfig } = useApp();
   const navigate = useNavigate();
   const location = useLocation();
   const [lightboxPhoto, setLightboxPhoto] = useState<string | null>(null);
@@ -395,15 +395,32 @@ export default function Gallery() {
           </div>
         </div>
 
+        {/* Error State */}
+        {photosError && (
+          <div className="text-center py-12 px-4">
+            <div className="inline-block px-6 py-4 rounded-lg bg-red-50 border border-red-200 max-w-md">
+              <p className="text-red-700 font-semibold mb-1">Couldn't load photos</p>
+              <p className="text-red-500 text-sm mb-3">{photosError}</p>
+              <button
+                onClick={handleRefresh}
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold text-white bg-red-600 hover:bg-red-700 transition-colors"
+              >
+                <RefreshCw className="w-4 h-4" />
+                Try again
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Loading State */}
-        {isLoading && photos.length === 0 && (
+        {isLoading && photos.length === 0 && !photosError && (
           <div className="flex items-center justify-center py-20">
             <Loader2 className="w-8 h-8 text-[#c9a96e] animate-spin" />
           </div>
         )}
 
         {/* Empty State */}
-        {!isLoading && photos.length === 0 && (
+        {!isLoading && photos.length === 0 && !photosError && (
           <div className="text-center py-16">
             <ImagePlus className="w-16 h-16 text-[#f5e6d3] mx-auto mb-4" />
             <h3 className="text-lg text-[#2c2c2c] mb-1" style={{ fontFamily: 'Georgia, serif' }}>

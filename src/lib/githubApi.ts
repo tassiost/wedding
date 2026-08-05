@@ -9,48 +9,36 @@ interface PhotosData {
 }
 
 export async function fetchPhotos(config: GitHubConfig): Promise<Photo[]> {
-  try {
-    const response = await fetch(`${API_BASE_URL}/api/photos`);
-    if (!response.ok) {
-      throw new Error(`Failed to fetch photos: ${response.statusText}`);
-    }
-    const data: PhotosData = await response.json();
-    return data.photos || [];
-  } catch (error) {
-    console.error('Error fetching photos:', error);
-    return [];
+  const response = await fetch(`${API_BASE_URL}/api/photos`);
+  if (!response.ok) {
+    throw new Error(`Failed to fetch photos: ${response.statusText}`);
   }
+  const data: PhotosData = await response.json();
+  return data.photos || [];
 }
 
 export async function uploadPhoto(
   config: GitHubConfig,
-  file: File,
+  file: File | Blob,
   caption: string,
   guestName: string,
   metadata?: any,
   onProgress?: (progress: number) => void
 ): Promise<Photo> {
-  // Convert file to base64 data URL
-  const dataUrl = await fileToDataUrl(file);
-
   const maxRetries = 3;
   const baseDelay = 1000; // 1 second
 
   for (let attempt = 0; attempt < maxRetries; attempt++) {
     try {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('caption', caption || '');
+      formData.append('guestName', guestName || 'Anonymous');
+      formData.append('metadata', JSON.stringify(metadata || {}));
+
       const response = await fetch(`${API_BASE_URL}/api/photos`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          filename: file.name,
-          caption: caption || '',
-          guestName: guestName || 'Anonymous',
-          dataUrl,
-          fileSize: file.size,
-          metadata: metadata || {},
-        }),
+        body: formData,
       });
 
       if (!response.ok) {
@@ -84,15 +72,6 @@ export async function deletePhoto(config: GitHubConfig, photoId: string): Promis
   if (!response.ok) {
     throw new Error('Failed to delete photo');
   }
-}
-
-function fileToDataUrl(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result as string);
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
 }
 
 export async function verifyToken(config: GitHubConfig): Promise<boolean> {

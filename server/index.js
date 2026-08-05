@@ -2,13 +2,23 @@ const express = require('express');
 const cors = require('cors');
 const fetch = require('node-fetch');
 const archiver = require('archiver');
+const multer = require('multer');
+const fs = require('fs');
+const path = require('path');
+const os = require('os');
 const { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand } = require('@aws-sdk/client-s3');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
 
 app.use(cors());
-app.use(express.json({ limit: '200mb' }));
+app.use(express.json({ limit: '1mb' })); // JSON endpoints only (like/comment); uploads use multipart
+
+// Multipart upload config — disk storage keeps memory flat for large videos
+const upload = multer({
+  dest: path.join(os.tmpdir(), 'wedding-uploads'),
+  limits: { fileSize: 500 * 1024 * 1024 }, // 500MB max per file
+});
 
 const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
 const REPO_OWNER = process.env.REPO_OWNER || 'tassiost';
@@ -16,13 +26,22 @@ const REPO_NAME = process.env.REPO_NAME || 'wedding';
 const BRANCH = process.env.BRANCH || 'main';
 const PHOTOS_FILE_PATH = 'data/photos.json';
 const R2_USAGE_FILE_PATH = 'data/r2-usage.json';
+const ZIP_CACHE_KEY = 'wedding-photos.zip';
 
-// R2 Configuration
-const R2_ACCOUNT_ID = process.env.R2_ACCOUNT_ID || 'cddd528ef49c820d4fd4a106f2d67e00';
-const R2_ACCESS_KEY_ID = process.env.R2_ACCESS_KEY_ID || 'f16e1b0f3480c4e919b6d97475a689eb';
-const R2_SECRET_ACCESS_KEY = process.env.R2_SECRET_ACCESS_KEY || '6fc3303918de7e8d4c4063f4f3527805bfdf0098aeef85d7647cb13e24a3fd1f';
+// R2 Configuration — env vars only, no hardcoded fallbacks (security)
+const R2_ACCOUNT_ID = process.env.R2_ACCOUNT_ID;
+const R2_ACCESS_KEY_ID = process.env.R2_ACCESS_KEY_ID;
+const R2_SECRET_ACCESS_KEY = process.env.R2_SECRET_ACCESS_KEY;
 const R2_BUCKET_NAME = process.env.R2_BUCKET_NAME || 'wedding';
-const R2_PUBLIC_URL = process.env.R2_PUBLIC_URL || 'https://pub-bb9444735bc44da9934152376e2dc0de.r2.dev';
+const R2_PUBLIC_URL = process.env.R2_PUBLIC_URL;
+
+// Startup validation — warn clearly instead of silent failures
+const REQUIRED_ENV = ['GITHUB_TOKEN', 'R2_ACCOUNT_ID', 'R2_ACCESS_KEY_ID', 'R2_SECRET_ACCESS_KEY', 'R2_PUBLIC_URL'];
+const MISSING_ENV = REQUIRED_ENV.filter(v => !process.env[v]);
+if (MISSING_ENV.length > 0) {
+  console.error('⚠️  Missing required environment variables:', MISSING_ENV.join(', '));
+  console.error('   Set them in Render → Environment. API calls will fail until resolved.');
+}
 
 // R2 Limits (Free Tier)
 const R2_LIMITS = {
@@ -118,16 +137,11 @@ async function getR2Usage() {
   };
 }
 
-async function updateR2Usage(usage) {
-  const data = {
-    ...usage,
-    lastUpdated: new Date().toISOString()
-  };
-  const content = Buffer.from(JSON.stringify(data, null, 2)).toString('base64');
-
-  // Get current SHA
-  let sha;
-  try {
+// ponytail: SHA-retry version of updateR2Usage — fixes concurrent upload usage-count race
+async function updateR2UsageWithRetry(mutateFn, maxRetries = 3) {
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    let sha;
+    let usage;
     const response = await fetch(
       `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${R2_USAGE_FILE_PATH}?ref=${BRANCH}`,
       { headers: getHeaders() }
@@ -135,26 +149,38 @@ async function updateR2Usage(usage) {
     if (response.ok) {
       const fileData = await response.json();
       sha = fileData.sha;
+      const content = Buffer.from(fileData.content, 'base64').toString('utf-8');
+      usage = JSON.parse(content);
     }
-  } catch (error) {
-    // File doesn't exist yet
+
+    const newUsage = mutateFn(usage || {
+      storageBytes: 0,
+      classAOperations: 0,
+      classBOperations: 0,
+      lastUpdated: new Date().toISOString(),
+    });
+
+    const content = Buffer.from(JSON.stringify({
+      ...newUsage,
+      lastUpdated: new Date().toISOString(),
+    }, null, 2)).toString('base64');
+
+    const body = { message: 'Update R2 usage', content, branch: BRANCH };
+    if (sha) body.sha = sha;
+
+    const putResponse = await fetch(
+      `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${R2_USAGE_FILE_PATH}`,
+      { method: 'PUT', headers: getHeaders(), body: JSON.stringify(body) }
+    );
+
+    if (putResponse.ok) return;
+    if (putResponse.status === 409 && attempt < maxRetries - 1) {
+      console.log(`R2 usage SHA mismatch, retrying (${attempt + 1}/${maxRetries})`);
+      continue;
+    }
+    throw new Error(`R2 usage save failed: ${putResponse.status}`);
   }
-
-  const body = {
-    message: 'Update R2 usage',
-    content,
-    branch: BRANCH,
-  };
-  if (sha) body.sha = sha;
-
-  await fetch(
-    `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${R2_USAGE_FILE_PATH}`,
-    {
-      method: 'PUT',
-      headers: getHeaders(),
-      body: JSON.stringify(body),
-    }
-  );
+  throw new Error('R2 usage save: max retries exceeded');
 }
 
 function checkR2Limits(usage, additionalStorageBytes = 0) {
@@ -201,12 +227,24 @@ app.get('/api/photos', async (req, res) => {
   }
 });
 
-// Upload photo to R2
-app.post('/api/photos', async (req, res) => {
+// Upload photo to R2 (multipart/form-data — streams file to disk, no base64, no 200MB limit)
+app.post('/api/photos', upload.single('file'), async (req, res) => {
+  const tmpFile = req.file;
+  let r2Uploaded = false;
+  let r2Key = null;
   try {
-    const { filename, caption, guestName, dataUrl, fileSize, metadata } = req.body;
+    if (!tmpFile) {
+      return res.status(400).json({ error: 'No file provided' });
+    }
 
-    console.log('Upload request:', { filename, fileSize, dataUrlLength: dataUrl?.length, metadata });
+    const { caption, guestName, metadata: metadataStr } = req.body;
+    const filename = tmpFile.originalname;
+    const fileSize = tmpFile.size;
+    const contentType = tmpFile.mimetype || 'application/octet-stream';
+    let metadata = {};
+    try { metadata = metadataStr ? JSON.parse(metadataStr) : {}; } catch { metadata = {}; }
+
+    console.log('Upload request:', { filename, fileSize, contentType, metadata });
 
     // Check R2 limits
     const usage = await getR2Usage();
@@ -219,31 +257,22 @@ app.post('/api/photos', async (req, res) => {
       });
     }
 
-    // Detect content type from dataUrl or metadata
-    let contentType = 'image/jpeg';
-    if (dataUrl.startsWith('data:video/')) {
-      contentType = dataUrl.match(/^data:(video\/\w+);/)?.[1] || 'video/mp4';
-    } else if (dataUrl.startsWith('data:image/')) {
-      contentType = dataUrl.match(/^data:(image\/\w+);/)?.[1] || 'image/jpeg';
-    }
-
-    // Convert base64 to buffer
-    const base64Data = dataUrl.replace(/^data:.*?;base64,/, '');
-    const buffer = Buffer.from(base64Data, 'base64');
-
     // Generate unique key for R2
     const key = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}-${filename}`;
+    r2Key = key;
 
-    // Upload to R2
+    // Upload to R2 — stream from disk, not memory
     console.log('Uploading to R2...');
     const putCommand = new PutObjectCommand({
       Bucket: R2_BUCKET_NAME,
       Key: key,
-      Body: buffer,
+      Body: fs.createReadStream(tmpFile.path),
       ContentType: contentType,
+      ContentLength: fileSize,
     });
 
     await s3Client.send(putCommand);
+    r2Uploaded = true;
     console.log('Uploaded to R2 successfully');
 
     // Generate R2 URL (public URL already includes bucket path)
@@ -375,16 +404,36 @@ app.post('/api/photos', async (req, res) => {
       throw new Error('Failed to upload photo after retries');
     }
 
-    // Update R2 usage
-    usage.storageBytes += fileSize;
-    usage.classAOperations += 1;
-    await updateR2Usage(usage);
-    console.log('Updated R2 usage:', usage);
+    // Update R2 usage (with SHA retry to handle concurrent uploads)
+    await updateR2UsageWithRetry(u => {
+      u.storageBytes += fileSize;
+      u.classAOperations += 1;
+      return u;
+    });
+    console.log('Updated R2 usage for upload:', { fileSize, key });
+
+    // Rebuild zip cache in background (fire-and-forget, no await)
+    rebuildZipCache().catch(err => console.error('Zip rebuild failed:', err.message));
 
     res.json(newPhoto);
   } catch (error) {
+    // ponytail: if R2 upload succeeded but metadata save failed, clean up orphaned R2 object
+    if (r2Uploaded && r2Key) {
+      console.error('Metadata save failed, cleaning up orphaned R2 object:', r2Key);
+      try {
+        await s3Client.send(new DeleteObjectCommand({ Bucket: R2_BUCKET_NAME, Key: r2Key }));
+        console.log('Cleaned up orphaned R2 object:', r2Key);
+      } catch (cleanupErr) {
+        console.error('Failed to cleanup R2 object:', cleanupErr.message);
+      }
+    }
     console.error('Error uploading photo:', error);
     res.status(500).json({ error: 'Failed to upload photo', details: error.message });
+  } finally {
+    // Always clean up multer temp file
+    if (tmpFile) {
+      fs.unlink(tmpFile.path, () => {});
+    }
   }
 });
 
@@ -414,9 +463,10 @@ app.delete('/api/photos/:id', async (req, res) => {
       await s3Client.send(deleteCommand);
       console.log('Deleted from R2:', photoToDelete.r2Key);
 
-      const usage = await getR2Usage();
-      usage.storageBytes = Math.max(0, usage.storageBytes - (photoToDelete.fileSize || 0));
-      await updateR2Usage(usage);
+      await updateR2UsageWithRetry(u => {
+        u.storageBytes = Math.max(0, u.storageBytes - (photoToDelete.fileSize || 0));
+        return u;
+      });
     }
 
     res.json(result);
@@ -494,56 +544,81 @@ app.post('/api/photos/:id/comments', async (req, res) => {
   }
 });
 
-// Download all photos as zip
-app.get('/api/photos/zip', async (req, res) => {
+// ponytail: Pre-build zip cache on R2 — eliminates Render request timeout
+// Streams zip to disk (not memory), then uploads to R2 as wedding-photos.zip
+// Called on startup and after each upload (fire-and-forget)
+let zipBuilding = false;
+
+async function rebuildZipCache() {
+  if (zipBuilding) return;
+  zipBuilding = true;
+  const tmpPath = path.join(os.tmpdir(), `wedding-photos-${Date.now()}.zip`);
   try {
+    console.log('Rebuilding zip cache...');
     const response = await fetch(
       `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${PHOTOS_FILE_PATH}?ref=${BRANCH}`,
       { headers: getHeaders() }
     );
-    if (!response.ok) {
-      throw new Error('Failed to fetch photos');
-    }
+    if (!response.ok) throw new Error('Failed to fetch photos for zip');
     const fileData = await response.json();
     const content = Buffer.from(fileData.content, 'base64').toString('utf-8');
     const data = JSON.parse(content);
     const photos = (data.photos || []).filter(p => p.r2Key);
 
-    res.setHeader('Content-Type', 'application/zip');
-    res.setHeader('Content-Disposition', 'attachment; filename="wedding-photos.zip"');
-
-    // ponytail: level 0 (store) — JPEGs/videos are already compressed, zlib just burns CPU/RAM
+    const output = fs.createWriteStream(tmpPath);
     const archive = archiver('zip', { zlib: { level: 0 } });
-    archive.on('error', err => {
-      console.error('Archive error:', err);
-      if (!res.headersSent) res.status(500).json({ error: 'Zip failed' });
-      archive.abort();
-    });
-    archive.pipe(res);
+    archive.pipe(output);
 
-    // ponytail: fetch via public R2 URL with node-fetch instead of S3 GetObject
-    // ponytail: S3 SDK hangs from Render Frankfurt; node-fetch already works for GitHub API
-    // ponytail: index prefix avoids duplicate-filename collisions (guests upload same IMG_xxxx)
-    for (let i = 0; i < photos.length; i++) {
-      const photo = photos[i];
-      try {
-        const r2res = await fetch(photo.r2Url);
-        if (!r2res.ok) throw new Error(`R2 fetch ${r2res.status}`);
-        const baseName = photo.filename || photo.r2Key.split('/').pop() || `${photo.id}.bin`;
-        const name = `${String(i + 1).padStart(3, '0')}-${baseName}`;
-        // ponytail: pass size so archiver streams the body instead of buffering to compute length
-        archive.append(r2res.body, { name, size: photo.fileSize });
-      } catch (err) {
-        console.error('Skip photo in zip:', photo.r2Key, err.message);
-      }
+    // Fetch photos with bounded concurrency to keep memory flat
+    const concurrency = 5;
+    for (let i = 0; i < photos.length; i += concurrency) {
+      const batch = photos.slice(i, i + concurrency);
+      await Promise.all(batch.map(async (photo, j) => {
+        try {
+          const r2res = await fetch(photo.r2Url);
+          if (!r2res.ok) throw new Error(`R2 fetch ${r2res.status}`);
+          const idx = i + j;
+          const baseName = photo.filename || photo.r2Key.split('/').pop() || `${photo.id}.bin`;
+          const name = `${String(idx + 1).padStart(3, '0')}-${baseName}`;
+          archive.append(r2res.body, { name, size: photo.fileSize });
+        } catch (err) {
+          console.error('Skip photo in zip:', photo.r2Key, err.message);
+        }
+      }));
     }
     await archive.finalize();
+    await new Promise(resolve => output.on('close', resolve));
+
+    const stat = fs.statSync(tmpPath);
+    console.log(`Zip built: ${stat.size} bytes, uploading to R2...`);
+
+    await s3Client.send(new PutObjectCommand({
+      Bucket: R2_BUCKET_NAME,
+      Key: ZIP_CACHE_KEY,
+      Body: fs.createReadStream(tmpPath),
+      ContentLength: stat.size,
+      ContentType: 'application/zip',
+    }));
+    console.log('Zip cache uploaded to R2');
   } catch (error) {
-    console.error('Error building zip:', error);
-    if (!res.headersSent) res.status(500).json({ error: 'Failed to build zip' });
+    console.error('Error rebuilding zip cache:', error.message);
+  } finally {
+    zipBuilding = false;
+    fs.unlink(tmpPath, () => {});
   }
+}
+
+// Download all photos as zip — redirects to pre-built cache on R2 (instant, no timeout)
+app.get('/api/photos/zip', (req, res) => {
+  if (zipBuilding) {
+    return res.status(503).json({ error: 'Zip is being rebuilt, please try again in a moment' });
+  }
+  // Redirect to R2 public URL — R2 serves directly, no Render request timeout
+  res.redirect(302, `${R2_PUBLIC_URL}/${ZIP_CACHE_KEY}`);
 });
 
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
+  // Build initial zip cache on startup (fire-and-forget)
+  rebuildZipCache().catch(err => console.error('Initial zip rebuild failed:', err.message));
 });

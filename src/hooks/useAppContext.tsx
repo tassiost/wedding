@@ -16,6 +16,7 @@ interface AppContextType {
 
   // Photos
   photos: Photo[];
+  photosError: string | null;
   loadPhotos: () => Promise<void>;
   addPhotos: (files: File[], captions: string[], guestName: string) => Promise<{ successCount: number; failedFiles: string[] }>;
   removePhoto: (id: string) => Promise<void>;
@@ -67,6 +68,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [githubConfig, setGithubConfigState] = useState<GitHubConfig | null>(loadStoredGithubConfig);
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [photos, setPhotos] = useState<Photo[]>([]);
+  const [photosError, setPhotosError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
 
@@ -120,11 +122,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const loadPhotos = useCallback(async () => {
     if (!githubConfig) return;
     setIsLoading(true);
+    setPhotosError(null);
     try {
       const fetched = await fetchPhotos(githubConfig);
       setPhotos(fetched);
     } catch (error) {
       console.error('Failed to load photos:', error);
+      setPhotosError(error instanceof Error ? error.message : 'Failed to load photos');
     } finally {
       setIsLoading(false);
     }
@@ -192,6 +196,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         isAuthenticated,
         authenticate,
         photos,
+        photosError,
         loadPhotos,
         addPhotos,
         removePhoto,
