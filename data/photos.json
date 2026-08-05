@@ -12,7 +12,11 @@
       "fileSize": 41,
       "metadata": {
         "dateTaken": "2026-08-05T00:00:00.000Z"
-      }
+      },
+      "likedBy": [
+        "DevinFinalCheck"
+      ],
+      "likes": 1
     },
     {
       "id": "1784821479031-wddbxtf8m",
@@ -6502,5 +6506,5 @@
       }
     }
   ],
-  "lastUpdated": "2026-08-05T22:54:43.461Z"
+  "lastUpdated": "2026-08-05T22:54:46.770Z"
 }
