@@ -1,6 +1,20 @@
 {
   "photos": [
     {
+      "id": "1785970482666-lpn5gji0f",
+      "filename": "test.jpg",
+      "caption": "Final check test",
+      "guestName": "DevinFinalCheck",
+      "uploadedAt": "2026-08-05T22:54:42.666Z",
+      "dateTaken": "2026-08-05T00:00:00.000Z",
+      "r2Url": "https://pub-bb9444735bc44da9934152376e2dc0de.r2.dev/1785970481661-onyks66a5-test.jpg",
+      "r2Key": "1785970481661-onyks66a5-test.jpg",
+      "fileSize": 41,
+      "metadata": {
+        "dateTaken": "2026-08-05T00:00:00.000Z"
+      }
+    },
+    {
       "id": "1784821479031-wddbxtf8m",
       "filename": "1000114500.jpg",
       "caption": "",
@@ -6488,5 +6502,5 @@
       }
     }
   ],
-  "lastUpdated": "2026-08-05T22:06:08.712Z"
+  "lastUpdated": "2026-08-05T22:54:43.461Z"
 }
