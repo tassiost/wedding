@@ -1,20 +1,6 @@
 {
   "photos": [
     {
-      "id": "1785967561577-0j92yhapp",
-      "filename": "test.jpg",
-      "caption": "Test upload",
-      "guestName": "DevinTest",
-      "uploadedAt": "2026-08-05T22:06:01.577Z",
-      "dateTaken": "2026-08-05T00:00:00.000Z",
-      "r2Url": "https://pub-bb9444735bc44da9934152376e2dc0de.r2.dev/1785967561123-trqrlgq6m-test.jpg",
-      "r2Key": "1785967561123-trqrlgq6m-test.jpg",
-      "fileSize": 153,
-      "metadata": {
-        "dateTaken": "2026-08-05T00:00:00.000Z"
-      }
-    },
-    {
       "id": "1784821479031-wddbxtf8m",
       "filename": "1000114500.jpg",
       "caption": "",
@@ -6502,5 +6488,5 @@
       }
     }
   ],
-  "lastUpdated": "2026-08-05T22:06:01.577Z"
+  "lastUpdated": "2026-08-05T22:06:08.712Z"
 }
