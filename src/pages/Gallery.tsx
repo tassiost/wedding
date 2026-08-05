@@ -25,7 +25,9 @@ export default function Gallery() {
   const [showComments, setShowComments] = useState(false);
   const [isLiking, setIsLiking] = useState(false);
   const [isPostingComment, setIsPostingComment] = useState(false);
-  const [downloadState, setDownloadState] = useState<'idle' | 'preparing' | 'started'>('idle');
+  const [downloadState, setDownloadState] = useState<'idle' | 'preparing' | 'downloading' | 'done'>('idle');
+  const [downloadProgress, setDownloadProgress] = useState(0); // 0-100
+  const [downloadSpeed, setDownloadSpeed] = useState(0); // MB/s
 
   const showToast = (message: string, duration = 3000) => {
     setToast({ message, visible: true, duration });
@@ -87,33 +89,69 @@ export default function Gallery() {
   const handleDownloadAll = async () => {
     if (photos.length === 0 || downloadState !== 'idle') return;
     const apiBase = import.meta.env.VITE_API_URL || 'https://wedding-backend-6g10.onrender.com';
-    const totalSizeMB = photos.reduce((sum, p) => sum + (p.fileSize || 0), 0) / (1024 * 1024);
-    const sizeLabel = totalSizeMB > 1024 ? `${(totalSizeMB / 1024).toFixed(1)}GB` : `${totalSizeMB.toFixed(0)}MB`;
 
     setDownloadState('preparing');
+    setDownloadProgress(0);
     try {
-      // Check if zip is ready before triggering download
-      const check = await fetch(`${apiBase}/api/photos/zip`, { method: 'HEAD', redirect: 'manual' });
-      if (check.status === 503) {
+      // Get the R2 URL from backend (JSON mode)
+      const infoRes = await fetch(`${apiBase}/api/photos/zip`, { headers: { Accept: 'application/json' } });
+      if (infoRes.status === 503) {
         showToast('Zip is being prepared — try again in a moment');
         setDownloadState('idle');
         return;
       }
-      // Trigger download via hidden anchor (doesn't navigate away from page)
-      setDownloadState('started');
-      showToast(`Download started (${sizeLabel}). Check your browser's download progress.`, 6000);
+      const { url } = await infoRes.json();
+
+      // Fetch directly from R2 with streaming progress
+      setDownloadState('downloading');
+      const response = await fetch(url);
+      if (!response.ok) throw new Error(`R2 fetch failed: ${response.status}`);
+
+      const contentLength = parseInt(response.headers.get('content-length') || '0', 10);
+      const totalMB = contentLength / (1024 * 1024);
+      const sizeLabel = totalMB > 1024 ? `${(totalMB / 1024).toFixed(1)}GB` : `${totalMB.toFixed(0)}MB`;
+
+      const reader = response.body?.getReader();
+      if (!reader) throw new Error('Streaming not supported');
+
+      const chunks: Uint8Array[] = [];
+      let received = 0;
+      const startTime = Date.now();
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        chunks.push(value);
+        received += value.length;
+        const progress = contentLength > 0 ? Math.round((received / contentLength) * 100) : 0;
+        setDownloadProgress(progress);
+        const elapsedSec = (Date.now() - startTime) / 1000;
+        if (elapsedSec > 0) {
+          setDownloadSpeed(Math.round((received / (1024 * 1024)) / elapsedSec));
+        }
+      }
+
+      // Combine chunks into a blob and trigger download
+      const blob = new Blob(chunks, { type: 'application/zip' });
+      const blobUrl = URL.createObjectURL(blob);
       const link = document.createElement('a');
-      link.href = `${apiBase}/api/photos/zip`;
+      link.href = blobUrl;
       link.download = 'wedding-photos.zip';
       link.style.display = 'none';
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-      // Reset button after 8 seconds so user can download again if needed
-      setTimeout(() => setDownloadState('idle'), 8000);
-    } catch {
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
+
+      setDownloadState('done');
+      setDownloadProgress(100);
+      showToast(`Download complete (${sizeLabel}). Check your downloads folder.`, 6000);
+      setTimeout(() => { setDownloadState('idle'); setDownloadProgress(0); }, 5000);
+    } catch (err) {
+      console.error('Download failed:', err);
       showToast('Download failed. Please try again.');
       setDownloadState('idle');
+      setDownloadProgress(0);
     }
   };
 
@@ -354,12 +392,14 @@ export default function Gallery() {
               className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-semibold text-white bg-[#2c2c2c] hover:bg-[#c9a96e] transition-all duration-200 disabled:opacity-50"
               title="Download all photos as zip"
             >
-              {downloadState !== 'idle' ? (
+              {downloadState !== 'idle' && downloadState !== 'done' ? (
                 <Loader2 className="w-4 h-4 animate-spin" />
+              ) : downloadState === 'done' ? (
+                <Download className="w-4 h-4 text-green-400" />
               ) : (
                 <Download className="w-4 h-4" />
               )}
-              {downloadState === 'preparing' ? 'Preparing...' : downloadState === 'started' ? 'Download started!' : 'Download All'}
+              {downloadState === 'preparing' ? 'Preparing...' : downloadState === 'downloading' ? `${downloadProgress}%` : downloadState === 'done' ? 'Saved!' : 'Download All'}
             </button>
             <Link
               to="/upload"
@@ -370,6 +410,28 @@ export default function Gallery() {
             </Link>
           </div>
         </div>
+
+        {/* Download Progress Bar */}
+        {downloadState === 'downloading' && (
+          <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[2000] bg-white rounded-2xl shadow-[0_8px_40px_rgba(0,0,0,0.15)] p-5 min-w-[320px] max-w-[90vw]">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm font-semibold text-[#2c2c2c]">
+                Downloading wedding-photos.zip
+              </span>
+              <span className="text-sm font-bold text-[#c9a96e]">{downloadProgress}%</span>
+            </div>
+            <div className="w-full h-3 bg-[#f0e6d8] rounded-full overflow-hidden">
+              <div
+                className="h-full bg-[#c9a96e] rounded-full transition-all duration-300 ease-out"
+                style={{ width: `${downloadProgress}%` }}
+              />
+            </div>
+            <div className="flex items-center justify-between mt-2 text-xs text-[#6b6b6b]">
+              <span>{downloadSpeed > 0 ? `${downloadSpeed} MB/s` : 'Starting...'}</span>
+              <span>{downloadProgress < 100 ? 'Please keep this page open' : 'Complete!'}</span>
+            </div>
+          </div>
+        )}
 
         {/* Search and Filters */}
         <div className="bg-white rounded-xl p-4 shadow-[0_4px_20px_rgba(0,0,0,0.08)] mb-6">

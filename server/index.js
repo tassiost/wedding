@@ -6,7 +6,7 @@ const multer = require('multer');
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
-const { S3Client, PutObjectCommand, DeleteObjectCommand } = require('@aws-sdk/client-s3');
+const { S3Client, PutObjectCommand, DeleteObjectCommand, PutBucketCorsCommand } = require('@aws-sdk/client-s3');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -60,6 +60,28 @@ const s3Client = new S3Client({
     secretAccessKey: R2_SECRET_ACCESS_KEY,
   },
 });
+
+// ponytail: Enable CORS on R2 bucket so frontend can fetch zip with progress tracking
+// This allows fetch() from the browser to read the streaming response body
+async function ensureR2Cors() {
+  try {
+    await s3Client.send(new PutBucketCorsCommand({
+      Bucket: R2_BUCKET_NAME,
+      CORSConfiguration: {
+        CORSRules: [{
+          AllowedOrigins: ['*'],
+          AllowedMethods: ['GET'],
+          AllowedHeaders: ['*'],
+          MaxAgeSeconds: 3600,
+        }],
+      },
+    }));
+    console.log('R2 CORS configured for public read access');
+  } catch (err) {
+    console.error('Failed to set R2 CORS (non-fatal — downloads still work via redirect):', err.message);
+  }
+}
+ensureR2Cors();
 
 // Helper function to get GitHub headers
 function getHeaders() {
@@ -533,6 +555,10 @@ async function rebuildZipCache() {
 app.get('/api/photos/zip', (req, res) => {
   if (!zipReady) {
     return res.status(503).json({ error: 'Zip is being prepared, please try again in a moment', retry: true });
+  }
+  // ponytail: return JSON with URL when client requests it (for progress-bar download)
+  if (req.headers.accept?.includes('application/json')) {
+    return res.json({ url: `${R2_PUBLIC_URL}/${ZIP_CACHE_KEY}` });
   }
   res.redirect(302, `${R2_PUBLIC_URL}/${ZIP_CACHE_KEY}`);
 });
