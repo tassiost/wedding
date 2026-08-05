@@ -85,16 +85,6 @@ export async function uploadPhoto(
   throw new Error('Failed to upload photo after retries');
 }
 
-export async function deletePhoto(config: GitHubConfig, photoId: string): Promise<void> {
-  const response = await fetch(`${API_BASE_URL}/api/photos/${photoId}`, {
-    method: 'DELETE',
-  });
-
-  if (!response.ok) {
-    throw new Error('Failed to delete photo');
-  }
-}
-
 export async function verifyToken(config: GitHubConfig): Promise<boolean> {
   // Backend handles authentication, so we just check if config exists
   return true;

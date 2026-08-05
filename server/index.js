@@ -6,7 +6,7 @@ const multer = require('multer');
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
-const { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand } = require('@aws-sdk/client-s3');
+const { S3Client, PutObjectCommand, DeleteObjectCommand } = require('@aws-sdk/client-s3');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -110,8 +110,33 @@ async function updatePhotosWithRetry(mutateFn, maxRetries = 3) {
 }
 
 // Health check endpoint for keep-alive
-app.get('/health', (req, res) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+// ponytail: also validates GitHub token so cron-job.org logs show 500 if token expires
+app.get('/health', async (req, res) => {
+  const result = { status: 'ok', timestamp: new Date().toISOString() };
+
+  // Quick GitHub token check — if token is expired/revoked, return 500
+  // so the keep-alive cron job logs the failure (visible in cron-job.org dashboard)
+  if (GITHUB_TOKEN) {
+    try {
+      const ghRes = await fetch(`https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}`, {
+        headers: getHeaders(),
+      });
+      if (ghRes.status === 401) {
+        result.status = 'error';
+        result.error = 'GitHub token is expired or revoked';
+        return res.status(500).json(result);
+      }
+      result.github = 'ok';
+    } catch (err) {
+      result.github = 'unreachable: ' + err.message;
+    }
+  } else {
+    result.status = 'error';
+    result.error = 'GITHUB_TOKEN not set';
+    return res.status(500).json(result);
+  }
+
+  res.json(result);
 });
 
 // R2 Usage Tracking
@@ -452,49 +477,6 @@ app.post('/api/photos', upload.single('file'), async (req, res) => {
   }
 });
 
-// Delete photo from R2 and GitHub
-app.delete('/api/photos/:id', async (req, res) => {
-  try {
-    const { id } = req.params;
-
-    // Delete from R2 first (outside retry — R2 doesn't have concurrency issues)
-    let r2Deleted = false;
-    let photoToDelete = null;
-
-    const result = await updatePhotosWithRetry((data) => {
-      photoToDelete = data.photos.find(p => p.id === id);
-      if (!photoToDelete) throw new Error('NOT_FOUND');
-
-      data.photos = data.photos.filter(p => p.id !== id);
-      return { result: { success: true }, message: 'Delete wedding photo' };
-    });
-
-    // R2 delete after metadata is committed
-    if (photoToDelete?.r2Key) {
-      const deleteCommand = new DeleteObjectCommand({
-        Bucket: R2_BUCKET_NAME,
-        Key: photoToDelete.r2Key,
-      });
-      await s3Client.send(deleteCommand);
-      console.log('Deleted from R2:', photoToDelete.r2Key);
-
-      await updateR2UsageWithRetry(u => {
-        u.storageBytes = Math.max(0, u.storageBytes - (photoToDelete.fileSize || 0));
-        return u;
-      });
-    }
-
-    res.json(result);
-
-    // Rebuild zip cache in background (fire-and-forget)
-    rebuildZipCache().catch(err => console.error('Zip rebuild after delete failed:', err.message));
-  } catch (error) {
-    if (error.message === 'NOT_FOUND') return res.status(404).json({ error: 'Photo not found' });
-    console.error('Error deleting photo:', error);
-    res.status(500).json({ error: 'Failed to delete photo' });
-  }
-});
-
 // Like/unlike photo
 app.post('/api/photos/:id/like', async (req, res) => {
   try {
@@ -534,6 +516,10 @@ app.post('/api/photos/:id/comments', async (req, res) => {
   try {
     const { id } = req.params;
     const { text, author } = req.body;
+
+    if (!text || !text.trim()) {
+      return res.status(400).json({ error: 'Comment text is required' });
+    }
 
     const newComment = {
       id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,

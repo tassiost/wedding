@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from 'react';
 import type { Photo, WeddingSettings, GitHubConfig } from '@/types';
-import { fetchPhotos, uploadPhoto, deletePhoto, verifyToken } from '@/lib/githubApi';
+import { fetchPhotos, uploadPhoto, verifyToken } from '@/lib/githubApi';
 import { BUILT_IN_CONFIG } from '@/config';
 
 interface AppContextType {
@@ -19,7 +19,6 @@ interface AppContextType {
   photosError: string | null;
   loadPhotos: () => Promise<void>;
   addPhotos: (files: File[], captions: string[], guestName: string) => Promise<{ successCount: number; failedFiles: string[] }>;
-  removePhoto: (id: string) => Promise<void>;
   isLoading: boolean;
   uploadProgress: number;
 }
@@ -175,17 +174,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   }, [githubConfig]);
 
-  const removePhoto = useCallback(async (id: string) => {
-    if (!githubConfig) throw new Error('Not authenticated');
-    setIsLoading(true);
-    try {
-      await deletePhoto(githubConfig, id);
-      setPhotos(prev => prev.filter(p => p.id !== id));
-    } finally {
-      setIsLoading(false);
-    }
-  }, [githubConfig]);
-
   return (
     <AppContext.Provider
       value={{
@@ -199,7 +187,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
         photosError,
         loadPhotos,
         addPhotos,
-        removePhoto,
         isLoading,
         uploadProgress,
       }}
