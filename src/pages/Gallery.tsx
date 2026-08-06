@@ -93,12 +93,20 @@ export default function Gallery() {
     setDownloadState('preparing');
     setDownloadProgress(0);
     try {
-      // Get zip metadata from backend
-      const infoRes = await fetch(`${apiBase}/api/photos/zip`, { headers: { Accept: 'application/json' } });
-      if (infoRes.status === 503) {
-        showToast('Zip is being prepared — try again in a moment');
-        setDownloadState('idle');
-        return;
+      // Get zip metadata from backend — auto-retry if zip is still building (cold start)
+      let infoRes: Response;
+      let retries = 0;
+      for (;;) {
+        infoRes = await fetch(`${apiBase}/api/photos/zip`, { headers: { Accept: 'application/json' } });
+        if (infoRes.status !== 503) break;
+        retries++;
+        if (retries === 1) showToast('Preparing your download — this may take a minute...');
+        if (retries >= 12) {
+          showToast('Zip is taking too long to prepare. Please try again later.', 5000);
+          setDownloadState('idle');
+          return;
+        }
+        await new Promise(r => setTimeout(r, 10000)); // wait 10s between retries
       }
       const { size } = await infoRes.json();
       if (!size) throw new Error('No zip size returned');
