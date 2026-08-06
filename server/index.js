@@ -533,6 +533,7 @@ async function rebuildZipCache() {
       Body: fs.createReadStream(tmpPath),
       ContentLength: stat.size,
       ContentType: 'application/zip',
+      ContentDisposition: 'attachment; filename="wedding-photos.zip"',
     }));
     console.log('Zip cache uploaded to R2');
     zipReady = true;
@@ -593,7 +594,8 @@ app.get('/api/photos/zip', async (req, res) => {
     return;
   }
 
-  // Mode 3: direct redirect (browser native download, no progress tracking)
+  // Mode 3: 302 redirect to R2 (browser downloads directly from R2, bypassing Render timeout)
+  // Content-Disposition is set on the R2 object itself so mobile browsers download properly
   res.redirect(302, `${R2_PUBLIC_URL}/${ZIP_CACHE_KEY}`);
 });
 
