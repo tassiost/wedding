@@ -101,11 +101,6 @@ export default function Gallery() {
         if (infoRes.status !== 503) break;
         retries++;
         if (retries === 1) showToast('Preparing your download — this may take a minute...');
-        if (retries >= 12) {
-          showToast('Zip is taking too long to prepare. Please try again later.', 5000);
-          setDownloadState('idle');
-          return;
-        }
         await new Promise(r => setTimeout(r, 10000)); // wait 10s between retries
       }
       const { size } = await infoRes.json();
