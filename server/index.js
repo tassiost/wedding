@@ -552,14 +552,48 @@ async function rebuildZipCache() {
 // Download all photos as zip — redirects to pre-built cache on R2 (instant, no timeout)
 // If zip isn't built yet (cold start), return 503 so frontend can show "preparing" message
 // While rebuilding, serve the stale cache (still has all previous photos)
-app.get('/api/photos/zip', (req, res) => {
+// ponytail: Zip download — three modes:
+// 1. Accept: application/json → return { size } for progress bar setup
+// 2. Range header → proxy R2 chunk to client (CORS-safe, works with Render 60s timeout)
+// 3. No Range → 302 redirect to R2 (direct browser download, no progress)
+app.get('/api/photos/zip', async (req, res) => {
   if (!zipReady) {
     return res.status(503).json({ error: 'Zip is being prepared, please try again in a moment', retry: true });
   }
-  // ponytail: return JSON with URL when client requests it (for progress-bar download)
+
+  // Mode 1: return metadata for progress bar
   if (req.headers.accept?.includes('application/json')) {
-    return res.json({ url: `${R2_PUBLIC_URL}/${ZIP_CACHE_KEY}` });
+    try {
+      const headRes = await fetch(`${R2_PUBLIC_URL}/${ZIP_CACHE_KEY}`, { method: 'HEAD' });
+      return res.json({
+        size: parseInt(headRes.headers.get('content-length') || '0', 10),
+        downloadUrl: `${req.protocol}://${req.get('host')}/api/photos/zip`,
+      });
+    } catch (err) {
+      return res.status(500).json({ error: 'Failed to get zip info' });
+    }
   }
+
+  // Mode 2: proxy with Range support — client downloads in chunks
+  if (req.headers.range) {
+    try {
+      const r2Res = await fetch(`${R2_PUBLIC_URL}/${ZIP_CACHE_KEY}`, {
+        headers: { Range: req.headers.range },
+      });
+      res.status(r2Res.status);
+      if (r2Res.headers.get('content-length')) res.setHeader('Content-Length', r2Res.headers.get('content-length'));
+      if (r2Res.headers.get('content-range')) res.setHeader('Content-Range', r2Res.headers.get('content-range'));
+      res.setHeader('Content-Type', 'application/zip');
+      res.setHeader('Accept-Ranges', 'bytes');
+      r2Res.body.pipe(res);
+    } catch (err) {
+      console.error('Zip proxy error:', err.message);
+      res.status(500).json({ error: 'Failed to proxy zip chunk' });
+    }
+    return;
+  }
+
+  // Mode 3: direct redirect (browser native download, no progress tracking)
   res.redirect(302, `${R2_PUBLIC_URL}/${ZIP_CACHE_KEY}`);
 });
 
