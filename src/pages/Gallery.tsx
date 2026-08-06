@@ -115,12 +115,25 @@ export default function Gallery() {
 
       for (let start = 0; start < size; start += chunkSize) {
         const end = Math.min(start + chunkSize - 1, size - 1);
-        const res = await fetch(`${apiBase}/api/photos/zip`, {
-          headers: { Range: `bytes=${start}-${end}` },
-        });
-        if (!res.ok && res.status !== 206) throw new Error(`Chunk fetch failed: ${res.status}`);
+        const expectedBytes = end - start + 1;
 
-        const buf = await res.arrayBuffer();
+        // Retry each chunk up to 3 times (network can drop on slow connections)
+        let buf: ArrayBuffer | null = null;
+        for (let retry = 0; retry < 3; retry++) {
+          try {
+            const res = await fetch(`${apiBase}/api/photos/zip`, {
+              headers: { Range: `bytes=${start}-${end}` },
+            });
+            if (!res.ok && res.status !== 206) throw new Error(`Chunk fetch failed: ${res.status}`);
+            buf = await res.arrayBuffer();
+            if (buf.byteLength === expectedBytes) break; // complete chunk
+            console.warn(`Chunk incomplete: got ${buf.byteLength}/${expectedBytes}, retry ${retry + 1}`);
+            buf = null;
+          } catch (err) {
+            console.warn(`Chunk fetch error (retry ${retry + 1}):`, err.message);
+          }
+        }
+        if (!buf) throw new Error(`Failed to download chunk at offset ${start}`);
         chunks.push(buf);
         received += buf.byteLength;
         const progress = Math.round((received / size) * 100);
