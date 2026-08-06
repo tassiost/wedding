@@ -106,9 +106,15 @@ export default function Gallery() {
       const totalMB = size / (1024 * 1024);
       const sizeLabel = totalMB > 1024 ? `${(totalMB / 1024).toFixed(1)}GB` : `${totalMB.toFixed(0)}MB`;
 
-      // ponytail: For very large zips (>1.5GB), skip progress bar and use native redirect.
-      // Browser handles large downloads better than assembling a giant blob in RAM.
-      if (totalMB > 1500) {
+      // ponytail: Check if File System Access API is available (Chrome/Edge desktop only)
+      // Mobile browsers (Safari iOS, Chrome Android) don't support showSaveFilePicker
+      // @ts-ignore
+      const hasFileSystemAccess = typeof window.showSaveFilePicker === 'function';
+
+      // ponytail: Without File System Access API, chunks are assembled into a blob in RAM.
+      // Mobile devices have limited RAM (~500MB per tab). Anything >200MB will likely crash.
+      // Use native browser download instead — no progress bar, but no crash either.
+      if (!hasFileSystemAccess && totalMB > 200) {
         setDownloadState('idle');
         showToast(`Download started (${sizeLabel}). Check your browser's download progress.`, 6000);
         const link = document.createElement('a');
@@ -122,38 +128,33 @@ export default function Gallery() {
       }
 
       // ponytail: 10MB chunks — safe down to 250KB/s (40s per chunk, under Render's 60s timeout)
-      // 50MB chunks would timeout at <1MB/s (common on poor wedding venue WiFi)
       setDownloadState('downloading');
       const chunkSize = 10 * 1024 * 1024; // 10MB per request
       let received = 0;
       const startTime = Date.now();
 
-      // ponytail: Use File System Access API when available (writes to disk, no RAM crash)
-      // Falls back to blob assembly for browsers without it (Safari, older Chrome)
-      let fileHandle: any = null;
       let writable: any = null;
       let useFileStream = false;
 
-      try {
-        // @ts-ignore — showSaveFilePicker is not in TS types yet
-        if (window.showSaveFilePicker) {
+      if (hasFileSystemAccess) {
+        try {
           // @ts-ignore
-          fileHandle = await window.showSaveFilePicker({
+          const fileHandle = await window.showSaveFilePicker({
             suggestedName: 'wedding-photos.zip',
             types: [{ description: 'Zip file', accept: { 'application/zip': ['.zip'] } }],
           });
           writable = await fileHandle.createWritable();
           useFileStream = true;
+        } catch (pickerErr) {
+          // User cancelled the save dialog — abort
+          if (pickerErr.name === 'AbortError') {
+            setDownloadState('idle');
+            setDownloadProgress(0);
+            return;
+          }
+          // Other errors — fall back to blob
+          console.log('File System Access API error, using blob fallback:', pickerErr.message);
         }
-      } catch (pickerErr) {
-        // User cancelled the save dialog — abort
-        if (pickerErr.name === 'AbortError') {
-          setDownloadState('idle');
-          setDownloadProgress(0);
-          return;
-        }
-        // Other errors (browser doesn't support) — fall back to blob
-        console.log('File System Access API not available, using blob fallback');
       }
 
       const chunks: ArrayBuffer[] = [];
