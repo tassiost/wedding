@@ -106,12 +106,57 @@ export default function Gallery() {
       const totalMB = size / (1024 * 1024);
       const sizeLabel = totalMB > 1024 ? `${(totalMB / 1024).toFixed(1)}GB` : `${totalMB.toFixed(0)}MB`;
 
-      // Download in 50MB chunks via backend proxy (CORS-safe, works with Render timeout)
+      // ponytail: For very large zips (>1.5GB), skip progress bar and use native redirect.
+      // Browser handles large downloads better than assembling a giant blob in RAM.
+      if (totalMB > 1500) {
+        setDownloadState('idle');
+        showToast(`Download started (${sizeLabel}). Check your browser's download progress.`, 6000);
+        const link = document.createElement('a');
+        link.href = `${apiBase}/api/photos/zip`;
+        link.download = 'wedding-photos.zip';
+        link.style.display = 'none';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        return;
+      }
+
+      // ponytail: 10MB chunks — safe down to 250KB/s (40s per chunk, under Render's 60s timeout)
+      // 50MB chunks would timeout at <1MB/s (common on poor wedding venue WiFi)
       setDownloadState('downloading');
-      const chunkSize = 50 * 1024 * 1024; // 50MB per request
-      const chunks: ArrayBuffer[] = [];
+      const chunkSize = 10 * 1024 * 1024; // 10MB per request
       let received = 0;
       const startTime = Date.now();
+
+      // ponytail: Use File System Access API when available (writes to disk, no RAM crash)
+      // Falls back to blob assembly for browsers without it (Safari, older Chrome)
+      let fileHandle: any = null;
+      let writable: any = null;
+      let useFileStream = false;
+
+      try {
+        // @ts-ignore — showSaveFilePicker is not in TS types yet
+        if (window.showSaveFilePicker) {
+          // @ts-ignore
+          fileHandle = await window.showSaveFilePicker({
+            suggestedName: 'wedding-photos.zip',
+            types: [{ description: 'Zip file', accept: { 'application/zip': ['.zip'] } }],
+          });
+          writable = await fileHandle.createWritable();
+          useFileStream = true;
+        }
+      } catch (pickerErr) {
+        // User cancelled the save dialog — abort
+        if (pickerErr.name === 'AbortError') {
+          setDownloadState('idle');
+          setDownloadProgress(0);
+          return;
+        }
+        // Other errors (browser doesn't support) — fall back to blob
+        console.log('File System Access API not available, using blob fallback');
+      }
+
+      const chunks: ArrayBuffer[] = [];
 
       for (let start = 0; start < size; start += chunkSize) {
         const end = Math.min(start + chunkSize - 1, size - 1);
@@ -126,7 +171,7 @@ export default function Gallery() {
             });
             if (!res.ok && res.status !== 206) throw new Error(`Chunk fetch failed: ${res.status}`);
             buf = await res.arrayBuffer();
-            if (buf.byteLength === expectedBytes) break; // complete chunk
+            if (buf.byteLength === expectedBytes) break;
             console.warn(`Chunk incomplete: got ${buf.byteLength}/${expectedBytes}, retry ${retry + 1}`);
             buf = null;
           } catch (err) {
@@ -134,7 +179,12 @@ export default function Gallery() {
           }
         }
         if (!buf) throw new Error(`Failed to download chunk at offset ${start}`);
-        chunks.push(buf);
+
+        if (useFileStream && writable) {
+          await writable.write(buf);
+        } else {
+          chunks.push(buf);
+        }
         received += buf.byteLength;
         const progress = Math.round((received / size) * 100);
         setDownloadProgress(progress);
@@ -144,17 +194,21 @@ export default function Gallery() {
         }
       }
 
-      // Assemble chunks into blob and trigger download
-      const blob = new Blob(chunks, { type: 'application/zip' });
-      const blobUrl = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = blobUrl;
-      link.download = 'wedding-photos.zip';
-      link.style.display = 'none';
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
+      if (useFileStream && writable) {
+        await writable.close();
+      } else {
+        // Assemble chunks into blob and trigger download
+        const blob = new Blob(chunks, { type: 'application/zip' });
+        const blobUrl = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = blobUrl;
+        link.download = 'wedding-photos.zip';
+        link.style.display = 'none';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
+      }
 
       setDownloadState('done');
       setDownloadProgress(100);
