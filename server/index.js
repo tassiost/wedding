@@ -1,12 +1,12 @@
 const express = require('express');
 const cors = require('cors');
 const fetch = require('node-fetch');
-const archiver = require('archiver');
 const multer = require('multer');
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
 const { S3Client, PutObjectCommand, DeleteObjectCommand, PutBucketCorsCommand } = require('@aws-sdk/client-s3');
+// archiver removed — zip is now built client-side in the browser (zero Render bandwidth)
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -376,9 +376,6 @@ app.post('/api/photos', upload.single('file'), async (req, res) => {
     });
     console.log('Updated R2 usage for upload:', { fileSize, key });
 
-    // Mark zip as stale — rebuild will happen on next download request (saves 887MB bandwidth per upload)
-    zipStale = true;
-
     res.json(newPhoto);
   } catch (error) {
     // ponytail: if R2 upload succeeded but metadata save failed, clean up orphaned R2 object
@@ -472,156 +469,15 @@ app.post('/api/photos/:id/comments', async (req, res) => {
   }
 });
 
-// ponytail: Pre-build zip cache on R2 — eliminates Render request timeout
-// Streams zip to disk (not memory), then uploads to R2 as wedding-photos.zip
-// Called on startup (only if zip missing on R2) and on first download after uploads (lazy rebuild)
-let zipBuilding = false;
-let zipPending = false;
-let zipReady = false; // true once at least one successful build completes
-let zipStale = false; // true when photos changed and zip needs rebuild before next download
-
-// ponytail: if a rebuild is requested while one is in progress, mark pending
-// and run again after the current one finishes — so burst uploads aren't missed
-async function rebuildZipCache() {
-  if (zipBuilding) {
-    zipPending = true;
-    return;
-  }
-  zipBuilding = true;
-  const tmpPath = path.join(os.tmpdir(), `wedding-photos-${Date.now()}.zip`);
-  try {
-    console.log('Rebuilding zip cache...');
-    const response = await fetch(
-      `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${PHOTOS_FILE_PATH}?ref=${BRANCH}`,
-      { headers: getHeaders() }
-    );
-    if (!response.ok) throw new Error('Failed to fetch photos for zip');
-    const fileData = await response.json();
-    const content = Buffer.from(fileData.content, 'base64').toString('utf-8');
-    const data = JSON.parse(content);
-    const photos = (data.photos || []).filter(p => p.r2Key);
-
-    const output = fs.createWriteStream(tmpPath);
-    const archive = archiver('zip', { zlib: { level: 0 } });
-    archive.pipe(output);
-
-    // Fetch photos with bounded concurrency to keep memory flat
-    const concurrency = 5;
-    for (let i = 0; i < photos.length; i += concurrency) {
-      const batch = photos.slice(i, i + concurrency);
-      await Promise.all(batch.map(async (photo, j) => {
-        try {
-          const r2res = await fetch(photo.r2Url);
-          if (!r2res.ok) throw new Error(`R2 fetch ${r2res.status}`);
-          const idx = i + j;
-          const baseName = photo.filename || photo.r2Key.split('/').pop() || `${photo.id}.bin`;
-          const name = `${String(idx + 1).padStart(3, '0')}-${baseName}`;
-          archive.append(r2res.body, { name, size: photo.fileSize });
-        } catch (err) {
-          console.error('Skip photo in zip:', photo.r2Key, err.message);
-        }
-      }));
-    }
-    await archive.finalize();
-    await new Promise(resolve => output.on('close', resolve));
-
-    const stat = fs.statSync(tmpPath);
-    console.log(`Zip built: ${stat.size} bytes, uploading to R2...`);
-
-    await s3Client.send(new PutObjectCommand({
-      Bucket: R2_BUCKET_NAME,
-      Key: ZIP_CACHE_KEY,
-      Body: fs.createReadStream(tmpPath),
-      ContentLength: stat.size,
-      ContentType: 'application/zip',
-      ContentDisposition: 'attachment; filename="wedding-photos.zip"',
-    }));
-    console.log('Zip cache uploaded to R2');
-    zipReady = true;
-  } catch (error) {
-    console.error('Error rebuilding zip cache:', error.message);
-  } finally {
-    zipBuilding = false;
-    fs.unlink(tmpPath, () => {});
-    // ponytail: if uploads/deletes happened during this rebuild, run again
-    if (zipPending) {
-      zipPending = false;
-      rebuildZipCache().catch(err => console.error('Pending zip rebuild failed:', err.message));
-    }
-  }
-}
-
-// Download all photos as zip — redirects to pre-built cache on R2 (instant, no timeout)
-// If zip isn't built yet (cold start), return 503 so frontend can show "preparing" message
-// While rebuilding, serve the stale cache (still has all previous photos)
-// ponytail: Zip download — three modes:
-// 1. Accept: application/json → return { size } for progress bar setup
-// 2. Range header → proxy R2 chunk to client (CORS-safe, works with Render 60s timeout)
-// 3. No Range → 302 redirect to R2 (direct browser download, no progress)
-app.get('/api/photos/zip', async (req, res) => {
-  // If zip is stale (photos were uploaded since last build), rebuild before serving
-  if (zipReady && zipStale && !zipBuilding) {
-    zipStale = false;
-    rebuildZipCache().catch(err => console.error('Stale zip rebuild failed:', err.message));
-    return res.status(503).json({ error: 'Zip is being updated with new photos, please try again in a moment', retry: true });
-  }
-
-  if (!zipReady) {
-    return res.status(503).json({ error: 'Zip is being prepared, please try again in a moment', retry: true });
-  }
-
-  // Mode 1: return metadata for progress bar
-  if (req.headers.accept?.includes('application/json')) {
-    try {
-      const headRes = await fetch(`${R2_PUBLIC_URL}/${ZIP_CACHE_KEY}`, { method: 'HEAD' });
-      return res.json({
-        size: parseInt(headRes.headers.get('content-length') || '0', 10),
-        downloadUrl: `${req.protocol}://${req.get('host')}/api/photos/zip`,
-      });
-    } catch (err) {
-      return res.status(500).json({ error: 'Failed to get zip info' });
-    }
-  }
-
-  // Mode 2: proxy with Range support — client downloads in chunks
-  if (req.headers.range) {
-    try {
-      const r2Res = await fetch(`${R2_PUBLIC_URL}/${ZIP_CACHE_KEY}`, {
-        headers: { Range: req.headers.range },
-      });
-      res.status(r2Res.status);
-      if (r2Res.headers.get('content-length')) res.setHeader('Content-Length', r2Res.headers.get('content-length'));
-      if (r2Res.headers.get('content-range')) res.setHeader('Content-Range', r2Res.headers.get('content-range'));
-      res.setHeader('Content-Type', 'application/zip');
-      res.setHeader('Accept-Ranges', 'bytes');
-      r2Res.body.pipe(res);
-    } catch (err) {
-      console.error('Zip proxy error:', err.message);
-      res.status(500).json({ error: 'Failed to proxy zip chunk' });
-    }
-    return;
-  }
-
-  // Mode 3: 302 redirect to R2 (browser downloads directly from R2, bypassing Render timeout)
-  // Content-Disposition is set on the R2 object itself so mobile browsers download properly
+// ponytail: Zip download — 302 redirect to pre-built zip on R2.
+// Zero Render bandwidth: redirect response is ~200 bytes, actual download
+// goes directly from R2 (free egress) to the browser's download manager.
+// The zip is a static snapshot — may not include photos uploaded after it
+// was built. Guests can still view/download individual photos from the gallery.
+app.get('/api/photos/zip', (req, res) => {
   res.redirect(302, `${R2_PUBLIC_URL}/${ZIP_CACHE_KEY}`);
 });
 
-app.listen(PORT, async () => {
+app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
-  // Check if zip already exists on R2 — if so, skip rebuild (saves ~1.7GB bandwidth per cold start)
-  // Only rebuild if zip is missing (first run) or was never built
-  try {
-    const headRes = await fetch(`${R2_PUBLIC_URL}/${ZIP_CACHE_KEY}`, { method: 'HEAD' });
-    if (headRes.ok) {
-      console.log('Zip cache already exists on R2 — skipping rebuild');
-      zipReady = true;
-    } else {
-      console.log('Zip cache missing on R2 — building...');
-      rebuildZipCache().catch(err => console.error('Initial zip rebuild failed:', err.message));
-    }
-  } catch (err) {
-    console.log('Could not check R2 for existing zip — building...', err.message);
-    rebuildZipCache().catch(err => console.error('Initial zip rebuild failed:', err.message));
-  }
 });

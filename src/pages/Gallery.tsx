@@ -4,7 +4,6 @@ import { Link, useNavigate, useLocation } from 'react-router';
 import { ImagePlus, Loader2, X, User, Clock, RefreshCw, Download, ChevronLeft, ChevronRight, Heart, MessageCircle, Grid, LayoutTemplate, Calendar } from 'lucide-react';
 import Toast from '@/components/Toast';
 import { likePhoto, addComment as addCommentApi } from '@/lib/githubApi';
-import { Zip, ZipDeflate } from 'fflate';
 
 export default function Gallery() {
   const { photos, photosError, loadPhotos, isLoading, isAuthenticated, githubConfig } = useApp();
@@ -26,9 +25,7 @@ export default function Gallery() {
   const [showComments, setShowComments] = useState(false);
   const [isLiking, setIsLiking] = useState(false);
   const [isPostingComment, setIsPostingComment] = useState(false);
-  const [downloadState, setDownloadState] = useState<'idle' | 'preparing' | 'downloading' | 'done'>('idle');
-  const [downloadProgress, setDownloadProgress] = useState(0); // 0-100
-  const [downloadSpeed, setDownloadSpeed] = useState(0); // MB/s
+  const [downloadState, setDownloadState] = useState<'idle' | 'preparing' | 'done'>('idle');
 
   const showToast = (message: string, duration = 3000) => {
     setToast({ message, visible: true, duration });
@@ -91,25 +88,12 @@ export default function Gallery() {
     if (photos.length === 0 || downloadState !== 'idle') return;
     const apiBase = import.meta.env.VITE_API_URL || 'https://wedding-backend-6g10.onrender.com';
 
-    // Only include photos that have a direct R2 URL (free egress, doesn't touch Render bandwidth)
-    const downloadable = photos.filter(p => p.r2Url);
-    if (downloadable.length === 0) {
-      showToast('No photos available to download');
-      return;
-    }
-
-    const totalBytes = downloadable.reduce((sum, p) => sum + (p.fileSize || 0), 0);
-    const totalMB = totalBytes / (1024 * 1024);
-    const sizeLabel = totalMB > 1024 ? `${(totalMB / 1024).toFixed(1)}GB` : `${totalMB.toFixed(0)}MB`;
-
-    // @ts-ignore
-    const hasFileSystemAccess = typeof window.showSaveFilePicker === 'function';
-
-    // Mobile without File System Access API: can't stream to disk, RAM too small for big zips
-    // Fall back to server-side pre-built zip (302 redirect to R2 — still free egress, just might be stale)
-    if (!hasFileSystemAccess && totalMB > 200) {
-      setDownloadState('idle');
-      showToast(`Download started (${sizeLabel}). Check your browser's download progress.`, 6000);
+    setDownloadState('preparing');
+    try {
+      // 302 redirect to pre-built zip on R2 — zero Render bandwidth (just the redirect header)
+      // Browser's native download manager handles progress, pausing, and resuming
+      // The zip is a snapshot — it may not have photos uploaded after it was last built
+      // but guests can still view/download individual photos from the gallery
       const link = document.createElement('a');
       link.href = `${apiBase}/api/photos/zip`;
       link.download = 'wedding-photos.zip';
@@ -117,120 +101,14 @@ export default function Gallery() {
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-      return;
-    }
-
-    setDownloadState('downloading');
-    setDownloadProgress(0);
-    const startTime = Date.now();
-    let received = 0;
-
-    try {
-      // Set up zip stream — fflate Zip writes to a Uint8Array stream
-      // With File System Access API: stream each photo to disk as it's fetched (constant RAM)
-      // Without: accumulate in memory (only for small zips <200MB)
-      let writable: any = null;
-      const zipChunks: Uint8Array[] = [];
-
-      const zip = new Zip((err, chunk, final) => {
-        if (err) throw err;
-        if (chunk) {
-          if (writable) {
-            writable.write(chunk);
-          } else {
-            zipChunks.push(chunk);
-          }
-        }
-      });
-
-      if (hasFileSystemAccess) {
-        try {
-          // @ts-ignore
-          const fileHandle = await window.showSaveFilePicker({
-            suggestedName: 'wedding-photos.zip',
-            types: [{ description: 'Zip file', accept: { 'application/zip': ['.zip'] } }],
-          });
-          writable = await fileHandle.createWritable();
-        } catch (pickerErr) {
-          if (pickerErr.name === 'AbortError') {
-            setDownloadState('idle');
-            setDownloadProgress(0);
-            return;
-          }
-          console.log('File System Access API error, using blob fallback:', pickerErr.message);
-        }
-      }
-
-      // Fetch each photo directly from R2 (free egress — zero Render bandwidth)
-      // and add to zip stream one at a time (constant memory with File System Access API)
-      for (let i = 0; i < downloadable.length; i++) {
-        const photo = downloadable[i];
-        const baseName = photo.filename || `${photo.id}.bin`;
-        const name = `${String(i + 1).padStart(3, '0')}-${baseName}`;
-
-        // Retry each photo up to 3 times
-        let buf: ArrayBuffer | null = null;
-        for (let retry = 0; retry < 3; retry++) {
-          try {
-            const res = await fetch(photo.r2Url!);
-            if (!res.ok) throw new Error(`Fetch failed: ${res.status}`);
-            buf = await res.arrayBuffer();
-            break;
-          } catch (err) {
-            console.warn(`Photo fetch error (retry ${retry + 1}): ${baseName} — ${err.message}`);
-          }
-        }
-        if (!buf) {
-          console.warn(`Skipping failed photo: ${baseName}`);
-          continue;
-        }
-
-        // Add to zip — level 0 = no compression (photos are already compressed, saves CPU)
-        const file = new ZipDeflate(name, { level: 0 });
-        zip.add(file);
-        file.push(new Uint8Array(buf), true);
-
-        received += buf.byteLength;
-        const progress = Math.round((received / totalBytes) * 100);
-        setDownloadProgress(progress);
-        const elapsedSec = (Date.now() - startTime) / 1000;
-        if (elapsedSec > 0) {
-          setDownloadSpeed(Math.round((received / (1024 * 1024)) / elapsedSec));
-        }
-      }
-
-      // Finalize zip — this writes the central directory
-      zip.end();
-
-      if (writable) {
-        await writable.close();
-      } else {
-        // Assemble zip in memory and trigger download
-        const totalLen = zipChunks.reduce((s, c) => s + c.length, 0);
-        const merged = new Uint8Array(totalLen);
-        let off = 0;
-        for (const c of zipChunks) { merged.set(c, off); off += c.length; }
-        const blob = new Blob([merged], { type: 'application/zip' });
-        const blobUrl = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = blobUrl;
-        link.download = 'wedding-photos.zip';
-        link.style.display = 'none';
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
-      }
 
       setDownloadState('done');
-      setDownloadProgress(100);
-      showToast(`Download complete (${sizeLabel}, ${downloadable.length} photos). Check your downloads folder.`, 6000);
-      setTimeout(() => { setDownloadState('idle'); setDownloadProgress(0); }, 5000);
+      showToast('Download started — check your browser\'s download progress.', 6000);
+      setTimeout(() => { setDownloadState('idle'); }, 3000);
     } catch (err) {
       console.error('Download failed:', err);
       showToast('Download failed. Please try again.');
       setDownloadState('idle');
-      setDownloadProgress(0);
     }
   };
 
@@ -478,7 +356,7 @@ export default function Gallery() {
               ) : (
                 <Download className="w-4 h-4" />
               )}
-              {downloadState === 'preparing' ? 'Preparing...' : downloadState === 'downloading' ? `${downloadProgress}%` : downloadState === 'done' ? 'Saved!' : 'Download All'}
+              {downloadState === 'preparing' ? 'Starting...' : downloadState === 'done' ? 'Download started!' : 'Download All'}
             </button>
             <Link
               to="/upload"
@@ -489,28 +367,6 @@ export default function Gallery() {
             </Link>
           </div>
         </div>
-
-        {/* Download Progress Bar — only show once streaming actually starts (CORS available) */}
-        {downloadState === 'downloading' && downloadProgress > 0 && (
-          <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[2000] bg-white rounded-2xl shadow-[0_8px_40px_rgba(0,0,0,0.15)] p-5 min-w-[320px] max-w-[90vw]">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-sm font-semibold text-[#2c2c2c]">
-                Downloading wedding-photos.zip
-              </span>
-              <span className="text-sm font-bold text-[#c9a96e]">{downloadProgress}%</span>
-            </div>
-            <div className="w-full h-3 bg-[#f0e6d8] rounded-full overflow-hidden">
-              <div
-                className="h-full bg-[#c9a96e] rounded-full transition-all duration-300 ease-out"
-                style={{ width: `${downloadProgress}%` }}
-              />
-            </div>
-            <div className="flex items-center justify-between mt-2 text-xs text-[#6b6b6b]">
-              <span>{downloadSpeed > 0 ? `${downloadSpeed} MB/s` : 'Starting...'}</span>
-              <span>{downloadProgress < 100 ? 'Please keep this page open' : 'Complete!'}</span>
-            </div>
-          </div>
-        )}
 
         {/* Search and Filters */}
         <div className="bg-white rounded-xl p-4 shadow-[0_4px_20px_rgba(0,0,0,0.08)] mb-6">
