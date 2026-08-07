@@ -103,6 +103,8 @@ export default function Gallery() {
     const totalBytes = downloadable.reduce((sum, p) => sum + (p.fileSize || 0), 0);
     const totalMB = totalBytes / (1024 * 1024);
     const sizeLabel = totalMB > 1024 ? `${(totalMB / 1024).toFixed(1)}GB` : `${totalMB.toFixed(0)}MB`;
+    // Avoid division by zero if photos don't have fileSize metadata
+    const progressBase = totalBytes > 0 ? totalBytes : downloadable.length;
 
     // @ts-ignore
     const hasFileSystemAccess = typeof window.showSaveFilePicker === 'function';
@@ -110,7 +112,8 @@ export default function Gallery() {
     // Without the R2 CORS proxy or on mobile without File System Access API:
     // fall back to the pre-built zip on R2 (302 redirect — zero Render bandwidth)
     // The pre-built zip may be stale (missing photos uploaded after it was built)
-    if (!r2Proxy || (!hasFileSystemAccess && totalMB > 200)) {
+    // Mobile browsers crash building zips in memory > ~100MB, so be conservative
+    if (!r2Proxy || (!hasFileSystemAccess && totalMB > 100)) {
       setDownloadState('idle');
       showToast(`Download started (${sizeLabel}). Check your browser's download progress.`, 6000);
       const link = document.createElement('a');
@@ -194,7 +197,7 @@ export default function Gallery() {
         file.push(new Uint8Array(buf), true);
 
         received += buf.byteLength;
-        setDownloadProgress(Math.round((received / totalBytes) * 100));
+        setDownloadProgress(Math.round((received / progressBase) * 100));
         const elapsedSec = (Date.now() - startTime) / 1000;
         if (elapsedSec > 0) {
           setDownloadSpeed(Math.round((received / (1024 * 1024)) / elapsedSec));
@@ -379,9 +382,31 @@ export default function Gallery() {
            photo.dataUrl?.startsWith('data:video');
   };
 
-  const downloadPhoto = (photo: Photo, filename: string) => {
+  const downloadPhoto = async (photo: Photo, filename: string) => {
+    const r2Proxy = import.meta.env.VITE_R2_PROXY_URL || '';
+    // If we have the CORS proxy, fetch through it so the download attribute works on all browsers
+    // (mobile Safari ignores download attribute for cross-origin URLs)
+    if (r2Proxy && photo.r2Key) {
+      try {
+        const res = await fetch(`${r2Proxy}/${encodeURIComponent(photo.r2Key)}`);
+        if (!res.ok) throw new Error(`Fetch failed: ${res.status}`);
+        const blob = await res.blob();
+        const blobUrl = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = blobUrl;
+        link.download = filename;
+        link.style.display = 'none';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
+        return;
+      } catch (err) {
+        console.warn('Proxy download failed, falling back to direct link:', err);
+      }
+    }
+    // Fallback: direct link to R2 (works on desktop, opens in new tab on mobile Safari)
     const url = getPhotoUrl(photo);
-    // Direct link to R2 — no fetch() (CORS would block it), browser handles the download
     const link = document.createElement('a');
     link.href = url;
     link.download = filename;
