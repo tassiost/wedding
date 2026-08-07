@@ -5,16 +5,27 @@ import { Upload, Image, Calendar, MapPin, Maximize, Minimize } from 'lucide-reac
 import QRCode from 'qrcode';
 
 export default function Home() {
-  const { settings, photos } = useApp();
+  const { settings, photos, loadPhotos, isAuthenticated } = useApp();
   const [qrDataUrl, setQrDataUrl] = useState('');
   const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const photosLengthRef = useRef(photos.length);
   const slideshowRef = useRef<HTMLDivElement>(null);
 
   const getPhotoUrl = (photo: any) => {
     return photo.r2Url || photo.dataUrl || '';
   };
+
+  const isVideo = (photo: any) => {
+    return photo.r2Url?.endsWith('.mp4') || photo.r2Url?.endsWith('.mov') || photo.r2Url?.endsWith('.webm') ||
+           photo.dataUrl?.startsWith('data:video');
+  };
+
+  // Load photos when authenticated so the slideshow works on the home page
+  useEffect(() => {
+    if (isAuthenticated && photos.length === 0) {
+      loadPhotos();
+    }
+  }, [isAuthenticated]);
 
   useEffect(() => {
     // Generate QR code pointing to the current URL
@@ -29,19 +40,14 @@ export default function Home() {
     }).then(setQrDataUrl).catch(console.error);
   }, []);
 
-  // Auto-advance slideshow every 3 seconds
+  // Auto-advance slideshow every 3 seconds — re-setup when photos load
   useEffect(() => {
-    photosLengthRef.current = photos.length;
+    if (photos.length === 0) return;
+    const interval = setInterval(() => {
+      setCurrentPhotoIndex(prev => (prev + 1) % photos.length);
+    }, 3000);
+    return () => clearInterval(interval);
   }, [photos.length]);
-
-  useEffect(() => {
-    if (photosLengthRef.current > 0) {
-      const interval = setInterval(() => {
-        setCurrentPhotoIndex(prev => (prev + 1) % photosLengthRef.current);
-      }, 3000);
-      return () => clearInterval(interval);
-    }
-  }, []);
 
   const toggleFullscreen = () => {
     if (!slideshowRef.current) return;
@@ -89,11 +95,22 @@ export default function Home() {
         <div className="max-w-2xl mx-auto px-6 mb-8">
           <div ref={slideshowRef} className="bg-white rounded-xl overflow-hidden shadow-[0_4px_20px_rgba(0,0,0,0.08)]">
             <div className="relative aspect-video bg-black">
-              <img
-                src={getPhotoUrl(photos[currentPhotoIndex])}
-                alt={photos[currentPhotoIndex]?.caption || 'Wedding photo'}
-                className="w-full h-full object-contain"
-              />
+              {isVideo(photos[currentPhotoIndex]) ? (
+                <video
+                  src={getPhotoUrl(photos[currentPhotoIndex])}
+                  className="w-full h-full object-contain"
+                  autoPlay
+                  muted
+                  loop
+                  playsInline
+                />
+              ) : (
+                <img
+                  src={getPhotoUrl(photos[currentPhotoIndex])}
+                  alt={photos[currentPhotoIndex]?.caption || 'Wedding photo'}
+                  className="w-full h-full object-contain"
+                />
+              )}
               {photos[currentPhotoIndex]?.caption && (
                 <div className="absolute bottom-0 left-0 right-0 bg-black/60 text-white p-3 text-center">
                   <p className="text-sm" style={{ fontFamily: 'Georgia, serif' }}>
@@ -111,7 +128,7 @@ export default function Home() {
             </div>
             <div className="p-4 text-center">
               <p className="text-[#6b6b6b] text-sm">
-                Photo {currentPhotoIndex + 1} of {photos.length}
+                Item {currentPhotoIndex + 1} of {photos.length}
               </p>
             </div>
           </div>
@@ -169,7 +186,7 @@ export default function Home() {
             </li>
             <li className="flex items-start gap-2">
               <span className="w-5 h-5 rounded-full bg-[#c9a96e] text-white text-xs flex items-center justify-center flex-shrink-0 mt-0.5">4</span>
-              All photos are stored securely on GitHub
+              All photos are stored securely on Cloudflare R2
             </li>
           </ol>
         </div>
