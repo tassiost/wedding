@@ -599,8 +599,21 @@ app.get('/api/photos/zip', async (req, res) => {
   res.redirect(302, `${R2_PUBLIC_URL}/${ZIP_CACHE_KEY}`);
 });
 
-app.listen(PORT, () => {
+app.listen(PORT, async () => {
   console.log(`Server running on port ${PORT}`);
-  // Build initial zip cache on startup (fire-and-forget)
-  rebuildZipCache().catch(err => console.error('Initial zip rebuild failed:', err.message));
+  // Check if zip already exists on R2 — if so, skip rebuild (saves ~1.7GB bandwidth per cold start)
+  // Only rebuild if zip is missing (first run) or was never built
+  try {
+    const headRes = await fetch(`${R2_PUBLIC_URL}/${ZIP_CACHE_KEY}`, { method: 'HEAD' });
+    if (headRes.ok) {
+      console.log('Zip cache already exists on R2 — skipping rebuild');
+      zipReady = true;
+    } else {
+      console.log('Zip cache missing on R2 — building...');
+      rebuildZipCache().catch(err => console.error('Initial zip rebuild failed:', err.message));
+    }
+  } catch (err) {
+    console.log('Could not check R2 for existing zip — building...', err.message);
+    rebuildZipCache().catch(err => console.error('Initial zip rebuild failed:', err.message));
+  }
 });
