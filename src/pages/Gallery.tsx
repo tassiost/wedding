@@ -64,7 +64,7 @@ export default function Gallery() {
   useEffect(() => {
     if (photos.length > photoCount && photoCount > 0) {
       const diff = photos.length - photoCount;
-      showToast(`${diff} new photo${diff !== 1 ? 's' : ''} uploaded!`);
+      showToast(`${diff} new item${diff !== 1 ? 's' : ''} uploaded!`);
     }
     setPhotoCount(photos.length);
   }, [photos.length, photoCount]);
@@ -99,6 +99,11 @@ export default function Gallery() {
     const totalBytes = downloadable.reduce((sum, p) => sum + (p.fileSize || 0), 0);
     const totalMB = totalBytes / (1024 * 1024);
     const sizeLabel = totalMB > 1024 ? `${(totalMB / 1024).toFixed(1)}GB` : `${totalMB.toFixed(0)}MB`;
+    const photoCount = downloadable.filter(p => !isVideo(p)).length;
+    const videoCount = downloadable.filter(p => isVideo(p)).length;
+    const itemLabel = videoCount > 0
+      ? `${photoCount} photos, ${videoCount} video${videoCount !== 1 ? 's' : ''}`
+      : `${photoCount} photos`;
 
     setDownloadState('downloading');
     setDownloadProgress(0);
@@ -156,7 +161,7 @@ export default function Gallery() {
 
         setDownloadState('done');
         setDownloadProgress(100);
-        showToast(`Download started (${sizeLabel}, ${downloadable.length} photos). Check your browser's download progress.`, 8000);
+        showToast(`Download started (${sizeLabel}, ${itemLabel}). Check your browser's download progress.`, 8000);
         setTimeout(() => { setDownloadState('idle'); setDownloadProgress(0); }, 5000);
       } else {
         // === Fallback: no Service Worker (very old browser) ===
@@ -413,7 +418,7 @@ export default function Gallery() {
           </h2>
           <div className="flex items-center gap-3">
             <span className="text-[#6b6b6b] text-sm">
-              {filteredPhotos.length} of {photos.length} photos
+              {filteredPhotos.length} of {photos.length} items{photos.filter(isVideo).length > 0 ? ` (${photos.filter(p => !isVideo(p)).length} photos, ${photos.filter(isVideo).length} videos)` : ''}
             </span>
             <span className="text-[#6b6b6b] text-sm">
               • {getStorageUsage()}
@@ -430,7 +435,7 @@ export default function Gallery() {
               onClick={handleDownloadAll}
               disabled={photos.length === 0 || downloadState !== 'idle'}
               className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-semibold text-white bg-[#2c2c2c] hover:bg-[#c9a96e] transition-all duration-200 disabled:opacity-50"
-              title="Download all photos as zip"
+              title="Download all photos and videos as zip"
             >
               {downloadState !== 'idle' && downloadState !== 'done' ? (
                 <Loader2 className="w-4 h-4 animate-spin" />
@@ -439,7 +444,7 @@ export default function Gallery() {
               ) : (
                 <Download className="w-4 h-4" />
               )}
-              {downloadState === 'preparing' ? 'Starting...' : downloadState === 'downloading' ? `${downloadProgress}%` : downloadState === 'done' ? 'Saved!' : 'Download All'}
+              {downloadState === 'preparing' ? 'Starting...' : downloadState === 'downloading' ? `${downloadProgress}%` : downloadState === 'done' ? 'Started!' : 'Download All'}
             </button>
             <Link
               to="/upload"
@@ -468,7 +473,7 @@ export default function Gallery() {
             </div>
             <div className="flex items-center justify-between mt-2 text-xs text-[#6b6b6b]">
               <span>{downloadSpeed > 0 ? `${downloadSpeed} MB/s` : 'Starting...'}</span>
-              <span>{downloadProgress < 100 ? 'Please keep this page open' : 'Complete!'}</span>
+              <span>{downloadProgress < 100 ? 'Please keep this page open' : 'Zip sent to browser — check downloads'}</span>
             </div>
           </div>
         )}
@@ -533,7 +538,7 @@ export default function Gallery() {
         {photosError && (
           <div className="text-center py-12 px-4">
             <div className="inline-block px-6 py-4 rounded-lg bg-red-50 border border-red-200 max-w-md">
-              <p className="text-red-700 font-semibold mb-1">Couldn't load photos</p>
+              <p className="text-red-700 font-semibold mb-1">Couldn't load gallery</p>
               <p className="text-red-500 text-sm mb-3">{photosError}</p>
               <button
                 onClick={handleRefresh}
@@ -558,7 +563,7 @@ export default function Gallery() {
           <div className="text-center py-16">
             <ImagePlus className="w-16 h-16 text-[#f5e6d3] mx-auto mb-4" />
             <h3 className="text-lg text-[#2c2c2c] mb-1" style={{ fontFamily: 'Georgia, serif' }}>
-              No photos yet
+              No photos or videos yet
             </h3>
             <p className="text-[#6b6b6b] text-sm mb-6">Be the first to share a moment!</p>
             <Link
