@@ -89,10 +89,9 @@ export default function Gallery() {
 
   const handleDownloadAll = async () => {
     if (photos.length === 0 || downloadState !== 'idle') return;
-    const apiBase = import.meta.env.VITE_API_URL || 'https://wedding-backend-6g10.onrender.com';
-    // Cloudflare Worker CORS proxy for R2 — enables browser fetch() from GitHub Pages
-    // Without this, CORS blocks fetch() to r2.dev URLs (only custom domains support CORS)
-    const r2Proxy = import.meta.env.VITE_R2_PROXY_URL || '';
+    // All API calls go through the Cloudflare Worker (zero Render bandwidth)
+    const apiBase = import.meta.env.VITE_API_URL || 'https://wedding-r2-proxy.tassio-wedding.workers.dev';
+    const r2Proxy = import.meta.env.VITE_R2_PROXY_URL || apiBase;
 
     const downloadable = photos.filter(p => p.r2Url);
     if (downloadable.length === 0) {
@@ -383,10 +382,10 @@ export default function Gallery() {
   };
 
   const downloadPhoto = async (photo: Photo, filename: string) => {
-    const r2Proxy = import.meta.env.VITE_R2_PROXY_URL || '';
-    // If we have the CORS proxy, fetch through it so the download attribute works on all browsers
+    const r2Proxy = import.meta.env.VITE_R2_PROXY_URL || import.meta.env.VITE_API_URL || 'https://wedding-r2-proxy.tassio-wedding.workers.dev';
+    // Fetch through the CORS proxy so the download attribute works on all browsers
     // (mobile Safari ignores download attribute for cross-origin URLs)
-    if (r2Proxy && photo.r2Key) {
+    if (photo.r2Key) {
       try {
         const res = await fetch(`${r2Proxy}/${encodeURIComponent(photo.r2Key)}`);
         if (!res.ok) throw new Error(`Fetch failed: ${res.status}`);

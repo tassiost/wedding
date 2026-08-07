@@ -1,6 +1,6 @@
 import type { Photo, GitHubConfig } from '@/types';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://wedding-backend-6g10.onrender.com';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://wedding-r2-proxy.tassio-wedding.workers.dev';
 
 interface PhotosData {
   photos: Photo[];
