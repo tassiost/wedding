@@ -376,8 +376,8 @@ app.post('/api/photos', upload.single('file'), async (req, res) => {
     });
     console.log('Updated R2 usage for upload:', { fileSize, key });
 
-    // Rebuild zip cache in background (fire-and-forget, no await)
-    rebuildZipCache().catch(err => console.error('Zip rebuild failed:', err.message));
+    // Mark zip as stale — rebuild will happen on next download request (saves 887MB bandwidth per upload)
+    zipStale = true;
 
     res.json(newPhoto);
   } catch (error) {
@@ -474,10 +474,11 @@ app.post('/api/photos/:id/comments', async (req, res) => {
 
 // ponytail: Pre-build zip cache on R2 — eliminates Render request timeout
 // Streams zip to disk (not memory), then uploads to R2 as wedding-photos.zip
-// Called on startup and after each upload/delete (fire-and-forget)
+// Called on startup (only if zip missing on R2) and on first download after uploads (lazy rebuild)
 let zipBuilding = false;
 let zipPending = false;
 let zipReady = false; // true once at least one successful build completes
+let zipStale = false; // true when photos changed and zip needs rebuild before next download
 
 // ponytail: if a rebuild is requested while one is in progress, mark pending
 // and run again after the current one finishes — so burst uploads aren't missed
@@ -558,6 +559,13 @@ async function rebuildZipCache() {
 // 2. Range header → proxy R2 chunk to client (CORS-safe, works with Render 60s timeout)
 // 3. No Range → 302 redirect to R2 (direct browser download, no progress)
 app.get('/api/photos/zip', async (req, res) => {
+  // If zip is stale (photos were uploaded since last build), rebuild before serving
+  if (zipReady && zipStale && !zipBuilding) {
+    zipStale = false;
+    rebuildZipCache().catch(err => console.error('Stale zip rebuild failed:', err.message));
+    return res.status(503).json({ error: 'Zip is being updated with new photos, please try again in a moment', retry: true });
+  }
+
   if (!zipReady) {
     return res.status(503).json({ error: 'Zip is being prepared, please try again in a moment', retry: true });
   }
