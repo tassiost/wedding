@@ -5,8 +5,7 @@ const multer = require('multer');
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
-const { S3Client, PutObjectCommand, DeleteObjectCommand, PutBucketCorsCommand } = require('@aws-sdk/client-s3');
-// archiver removed — zip is now built client-side in the browser (zero Render bandwidth)
+const { S3Client, PutObjectCommand, DeleteObjectCommand } = require('@aws-sdk/client-s3');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -60,28 +59,6 @@ const s3Client = new S3Client({
     secretAccessKey: R2_SECRET_ACCESS_KEY,
   },
 });
-
-// ponytail: Enable CORS on R2 bucket so frontend can fetch zip with progress tracking
-// This allows fetch() from the browser to read the streaming response body
-async function ensureR2Cors() {
-  try {
-    await s3Client.send(new PutBucketCorsCommand({
-      Bucket: R2_BUCKET_NAME,
-      CORSConfiguration: {
-        CORSRules: [{
-          AllowedOrigins: ['*'],
-          AllowedMethods: ['GET'],
-          AllowedHeaders: ['*'],
-          MaxAgeSeconds: 3600,
-        }],
-      },
-    }));
-    console.log('R2 CORS configured for public read access');
-  } catch (err) {
-    console.error('Failed to set R2 CORS (non-fatal — downloads still work via redirect):', err.message);
-  }
-}
-ensureR2Cors();
 
 // Helper function to get GitHub headers
 function getHeaders() {

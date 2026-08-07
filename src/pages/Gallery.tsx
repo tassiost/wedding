@@ -257,23 +257,17 @@ export default function Gallery() {
            photo.dataUrl?.startsWith('data:video');
   };
 
-  const downloadPhoto = async (photo: Photo, filename: string) => {
+  const downloadPhoto = (photo: Photo, filename: string) => {
     const url = getPhotoUrl(photo);
-    try {
-      const response = await fetch(url);
-      const blob = await response.blob();
-      const blobUrl = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = blobUrl;
-      link.download = filename;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(blobUrl);
-    } catch (error) {
-      console.error('Download failed:', error);
-      showToast('Download failed. Please try again.');
-    }
+    // Direct link to R2 — no fetch() (CORS would block it), browser handles the download
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    link.target = '_blank';
+    link.style.display = 'none';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   const isLikedByUser = (photo: typeof photos[0]) => {
