@@ -127,7 +127,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setPhotos(fetched);
     } catch (error) {
       console.error('Failed to load photos:', error);
-      setPhotosError(error instanceof Error ? error.message : 'Failed to load photos');
+      setPhotosError(error instanceof Error ? error.message : 'Failed to load gallery');
     } finally {
       setIsLoading(false);
     }

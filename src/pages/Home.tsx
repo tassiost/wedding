@@ -154,7 +154,7 @@ export default function Home() {
           className="inline-flex items-center gap-2 px-8 py-3.5 rounded-full font-semibold text-white bg-[#2c2c2c] hover:bg-[#c9a96e] transition-all duration-200 hover:-translate-y-0.5"
         >
           <Upload className="w-5 h-5" />
-          Upload Photos
+          Add Photos
         </Link>
         <Link
           to="/gallery"
@@ -178,11 +178,11 @@ export default function Home() {
             </li>
             <li className="flex items-start gap-2">
               <span className="w-5 h-5 rounded-full bg-[#c9a96e] text-white text-xs flex items-center justify-center flex-shrink-0 mt-0.5">2</span>
-              Guests upload photos with captions from their phones
+              Guests upload photos and videos from their phones
             </li>
             <li className="flex items-start gap-2">
               <span className="w-5 h-5 rounded-full bg-[#c9a96e] text-white text-xs flex items-center justify-center flex-shrink-0 mt-0.5">3</span>
-              Photos appear in the gallery in real-time
+              Everything appears in the gallery in real-time
             </li>
             <li className="flex items-start gap-2">
               <span className="w-5 h-5 rounded-full bg-[#c9a96e] text-white text-xs flex items-center justify-center flex-shrink-0 mt-0.5">4</span>

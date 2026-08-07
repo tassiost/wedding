@@ -1,37 +1,28 @@
 // ============================================================
 // WEDDING PHOTO APP - BUILD-TIME CONFIGURATION
 // ============================================================
-// Fill in your GitHub details below, then rebuild & redeploy.
-// This makes the app auto-authenticated for ALL guests —
-// they won't need to enter anything. The token gets baked
-// into the JavaScript bundle.
+// This config is baked into the JavaScript bundle at build time.
+// The repoOwner/repoName/branch are used to identify the wedding
+// — the actual API calls go to the Cloudflare Worker (set in .env).
 //
-// SECURITY NOTE: Since your repo is public, this token WILL
-// be visible in the source code. The risk is low (repo scope
-// only, on a single public repo). After the wedding, revoke
-// the token at: https://github.com/settings/tokens
-//
-// STEP 1: Fill in the values below
-// STEP 2: Run: npm run build
-// STEP 3: Deploy the docs/ folder to GitHub Pages
+// The token is no longer needed here — the Worker handles auth
+// server-side via its own environment variables.
 // ============================================================
-// Rebuilt with token for guest uploads
 
 export const BUILT_IN_CONFIG = {
-  // Token is now stored server-side as environment variable
+  // Token is stored server-side on the Cloudflare Worker
   token: '',
 
-  // Your GitHub username (or org name)
+  // Your GitHub username (or org name) — used as an identifier
   repoOwner: 'tassiost',
 
-  // Your repo name (e.g., 'wedding-photos')
+  // Your repo name
   repoName: 'wedding',
 
-  // The branch to save photos to (usually 'main')
+  // The branch (usually 'main')
   branch: 'main',
 };
 
 // Set this to TRUE to disable the Settings page for guests.
-// Only do this AFTER you've baked in your config above and
-// confirmed it works. When true, the Setup nav link is hidden.
+// When true, the Setup nav link is hidden.
 export const HIDE_SETTINGS = true;

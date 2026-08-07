@@ -87,7 +87,7 @@ export default function Upload() {
   const handleUpload = async () => {
     if (previews.length === 0) return;
     if (!isAuthenticated) {
-      showToast('Please connect GitHub in Settings first');
+      showToast('Please refresh the page and try again');
       return;
     }
 
@@ -153,9 +153,9 @@ export default function Upload() {
       setUploadProgress(100);
 
       if (result.failedFiles.length > 0) {
-        showToast(`${result.successCount} uploaded, ${result.failedFiles.length} failed. Retry failed photos.`);
+        showToast(`${result.successCount} uploaded, ${result.failedFiles.length} failed. Tap retry to try again.`);
       } else {
-        showToast(`Uploaded ${result.successCount} photo${result.successCount !== 1 ? 's' : ''}!`);
+        showToast(`Uploaded ${result.successCount} item${result.successCount !== 1 ? 's' : ''}!`);
         // Only redirect if all succeeded
         setTimeout(() => {
           navigate('/gallery', { state: { refresh: true } });
@@ -237,7 +237,7 @@ export default function Upload() {
       if (result.failedFiles.length > 0) {
         showToast(`${result.successCount} retried successfully, ${result.failedFiles.length} still failed.`);
       } else {
-        showToast('All failed photos uploaded successfully!');
+        showToast('All failed items uploaded successfully!');
         // ponytail: use functional setState to avoid stale closure — previews was captured at function call time
         setPreviews(prev => {
           const remaining = prev.filter(p => p.status !== 'success');
@@ -267,10 +267,10 @@ export default function Upload() {
           <div className="bg-white rounded-xl p-8 shadow-[0_4px_20px_rgba(0,0,0,0.08)]">
             <UploadCloud className="w-16 h-16 text-[#f5e6d3] mx-auto mb-4" />
             <h2 className="text-xl font-semibold text-[#2c2c2c] mb-2" style={{ fontFamily: 'Georgia, serif' }}>
-              GitHub Not Connected
+              Not Connected
             </h2>
             <p className="text-[#6b6b6b] text-sm mb-6">
-              To upload photos, you need to connect your GitHub repository first.
+              The upload service couldn't be reached. Please refresh the page and try again.
             </p>
             <button
               onClick={() => navigate('/settings')}
@@ -323,7 +323,7 @@ export default function Upload() {
             Drop photos or videos here
           </h3>
           <p className="text-[#6b6b6b] text-sm">
-            or click to browse (no limit, 150MB each)
+            or click to browse (no limit, 100MB each)
           </p>
           <input
             ref={fileInputRef}
@@ -406,7 +406,7 @@ export default function Upload() {
               ) : (
                 <>
                   <UploadCloud className="w-5 h-5" />
-                  Upload {previews.filter(p => p.status !== 'success').length} Photo{previews.filter(p => p.status !== 'success').length !== 1 ? 's' : ''}
+                  Upload {previews.filter(p => p.status !== 'success').length} Item{previews.filter(p => p.status !== 'success').length !== 1 ? 's' : ''}
                 </>
               )}
             </button>

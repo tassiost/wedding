@@ -49,7 +49,7 @@ export default function Gallery() {
     }
   }, [location.state, isAuthenticated, navigate, location.pathname]);
 
-  // Poll for new photos every 30 seconds (reduced from 10s to avoid GitHub rate limits)
+  // Poll for new photos every 30 seconds
   useEffect(() => {
     if (!isAuthenticated) return;
 
@@ -92,7 +92,7 @@ export default function Gallery() {
 
     const downloadable = photos.filter(p => p.r2Url);
     if (downloadable.length === 0) {
-      showToast('No photos available to download');
+      showToast('No items available to download');
       return;
     }
 
@@ -260,7 +260,7 @@ export default function Gallery() {
       setPhotoCount(currentCount); // Prevent false upload toast
     } catch (error) {
       console.error('Failed to like photo:', error);
-      showToast('Failed to like photo');
+      showToast('Failed to like — please try again');
     } finally {
       setIsLiking(false);
     }
@@ -389,10 +389,10 @@ export default function Gallery() {
           <div className="bg-white rounded-xl p-8 shadow-[0_4px_20px_rgba(0,0,0,0.08)]">
             <ImagePlus className="w-16 h-16 text-[#f5e6d3] mx-auto mb-4" />
             <h2 className="text-xl font-semibold text-[#2c2c2c] mb-2" style={{ fontFamily: 'Georgia, serif' }}>
-              GitHub Not Connected
+              Not Connected
             </h2>
             <p className="text-[#6b6b6b] text-sm mb-6">
-              Connect your GitHub repository to view the photo gallery.
+              The gallery couldn't load. Please try refreshing the page.
             </p>
             <Link
               to="/settings"
@@ -483,7 +483,7 @@ export default function Gallery() {
           <div className="flex flex-wrap gap-4">
             <input
               type="text"
-              placeholder="Search photos..."
+              placeholder="Search photos and videos..."
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
               className="flex-1 min-w-[200px] px-4 py-2 border-2 border-[#f5e6d3] rounded-lg text-[#2c2c2c] bg-white focus:outline-none focus:border-[#c9a96e] transition-colors"
@@ -799,7 +799,7 @@ export default function Gallery() {
             <button
               onClick={(e) => { e.stopPropagation(); downloadPhoto(filteredPhotos[lightboxIndex], `wedding-photo-${lightboxIndex}.jpg`); }}
               className="w-10 h-10 flex items-center justify-center text-white hover:text-[#c9a96e] transition-colors"
-              title="Download photo"
+              title="Download"
             >
               <Download className="w-6 h-6" />
             </button>
@@ -813,7 +813,7 @@ export default function Gallery() {
             <button
               onClick={(e) => { e.stopPropagation(); toggleLike(filteredPhotos[lightboxIndex]?.id || ''); }}
               className={`w-10 h-10 flex items-center justify-center transition-colors ${isLikedByUser(filteredPhotos[lightboxIndex]) ? 'text-red-500' : 'text-white hover:text-red-500'}`}
-              title="Like photo"
+              title="Like"
             >
               <Heart className={`w-6 h-6 ${isLikedByUser(filteredPhotos[lightboxIndex]) ? 'fill-current' : ''}`} />
             </button>
@@ -844,7 +844,7 @@ export default function Gallery() {
             />
           )}
 
-          {/* Photo info */}
+          {/* Item info */}
           {(lightboxCaption || lightboxMeta) && (
             <div className="absolute bottom-4 sm:bottom-8 left-1/2 -translate-x-1/2 text-center text-white max-w-xl px-4">
               {lightboxCaption && (
