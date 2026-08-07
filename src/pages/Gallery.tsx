@@ -4,6 +4,7 @@ import { Link, useNavigate, useLocation } from 'react-router';
 import { ImagePlus, Loader2, X, User, Clock, RefreshCw, Download, ChevronLeft, ChevronRight, Heart, MessageCircle, Grid, LayoutTemplate, Calendar } from 'lucide-react';
 import Toast from '@/components/Toast';
 import { likePhoto, addComment as addCommentApi } from '@/lib/githubApi';
+import { Zip, ZipDeflate } from 'fflate';
 
 export default function Gallery() {
   const { photos, photosError, loadPhotos, isLoading, isAuthenticated, githubConfig } = useApp();
@@ -90,54 +91,57 @@ export default function Gallery() {
     if (photos.length === 0 || downloadState !== 'idle') return;
     const apiBase = import.meta.env.VITE_API_URL || 'https://wedding-backend-6g10.onrender.com';
 
-    setDownloadState('preparing');
+    // Only include photos that have a direct R2 URL (free egress, doesn't touch Render bandwidth)
+    const downloadable = photos.filter(p => p.r2Url);
+    if (downloadable.length === 0) {
+      showToast('No photos available to download');
+      return;
+    }
+
+    const totalBytes = downloadable.reduce((sum, p) => sum + (p.fileSize || 0), 0);
+    const totalMB = totalBytes / (1024 * 1024);
+    const sizeLabel = totalMB > 1024 ? `${(totalMB / 1024).toFixed(1)}GB` : `${totalMB.toFixed(0)}MB`;
+
+    // @ts-ignore
+    const hasFileSystemAccess = typeof window.showSaveFilePicker === 'function';
+
+    // Mobile without File System Access API: can't stream to disk, RAM too small for big zips
+    // Fall back to server-side pre-built zip (302 redirect to R2 — still free egress, just might be stale)
+    if (!hasFileSystemAccess && totalMB > 200) {
+      setDownloadState('idle');
+      showToast(`Download started (${sizeLabel}). Check your browser's download progress.`, 6000);
+      const link = document.createElement('a');
+      link.href = `${apiBase}/api/photos/zip`;
+      link.download = 'wedding-photos.zip';
+      link.style.display = 'none';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      return;
+    }
+
+    setDownloadState('downloading');
     setDownloadProgress(0);
+    const startTime = Date.now();
+    let received = 0;
+
     try {
-      // Get zip metadata from backend — auto-retry if zip is still building (cold start)
-      let infoRes: Response;
-      let retries = 0;
-      for (;;) {
-        infoRes = await fetch(`${apiBase}/api/photos/zip`, { headers: { Accept: 'application/json' } });
-        if (infoRes.status !== 503) break;
-        retries++;
-        if (retries === 1) showToast('Preparing your download — this may take a minute...');
-        await new Promise(r => setTimeout(r, 10000)); // wait 10s between retries
-      }
-      const { size } = await infoRes.json();
-      if (!size) throw new Error('No zip size returned');
-
-      const totalMB = size / (1024 * 1024);
-      const sizeLabel = totalMB > 1024 ? `${(totalMB / 1024).toFixed(1)}GB` : `${totalMB.toFixed(0)}MB`;
-
-      // ponytail: Check if File System Access API is available (Chrome/Edge desktop only)
-      // Mobile browsers (Safari iOS, Chrome Android) don't support showSaveFilePicker
-      // @ts-ignore
-      const hasFileSystemAccess = typeof window.showSaveFilePicker === 'function';
-
-      // ponytail: Without File System Access API, chunks are assembled into a blob in RAM.
-      // Mobile devices have limited RAM (~500MB per tab). Anything >200MB will likely crash.
-      // Use native browser download instead — no progress bar, but no crash either.
-      if (!hasFileSystemAccess && totalMB > 200) {
-        setDownloadState('idle');
-        showToast(`Download started (${sizeLabel}). Check your browser's download progress.`, 6000);
-        const link = document.createElement('a');
-        link.href = `${apiBase}/api/photos/zip`;
-        link.download = 'wedding-photos.zip';
-        link.style.display = 'none';
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        return;
-      }
-
-      // ponytail: 10MB chunks — safe down to 250KB/s (40s per chunk, under Render's 60s timeout)
-      setDownloadState('downloading');
-      const chunkSize = 10 * 1024 * 1024; // 10MB per request
-      let received = 0;
-      const startTime = Date.now();
-
+      // Set up zip stream — fflate Zip writes to a Uint8Array stream
+      // With File System Access API: stream each photo to disk as it's fetched (constant RAM)
+      // Without: accumulate in memory (only for small zips <200MB)
       let writable: any = null;
-      let useFileStream = false;
+      const zipChunks: Uint8Array[] = [];
+
+      const zip = new Zip((err, chunk, final) => {
+        if (err) throw err;
+        if (chunk) {
+          if (writable) {
+            writable.write(chunk);
+          } else {
+            zipChunks.push(chunk);
+          }
+        }
+      });
 
       if (hasFileSystemAccess) {
         try {
@@ -147,50 +151,47 @@ export default function Gallery() {
             types: [{ description: 'Zip file', accept: { 'application/zip': ['.zip'] } }],
           });
           writable = await fileHandle.createWritable();
-          useFileStream = true;
         } catch (pickerErr) {
-          // User cancelled the save dialog — abort
           if (pickerErr.name === 'AbortError') {
             setDownloadState('idle');
             setDownloadProgress(0);
             return;
           }
-          // Other errors — fall back to blob
           console.log('File System Access API error, using blob fallback:', pickerErr.message);
         }
       }
 
-      const chunks: ArrayBuffer[] = [];
+      // Fetch each photo directly from R2 (free egress — zero Render bandwidth)
+      // and add to zip stream one at a time (constant memory with File System Access API)
+      for (let i = 0; i < downloadable.length; i++) {
+        const photo = downloadable[i];
+        const baseName = photo.filename || `${photo.id}.bin`;
+        const name = `${String(i + 1).padStart(3, '0')}-${baseName}`;
 
-      for (let start = 0; start < size; start += chunkSize) {
-        const end = Math.min(start + chunkSize - 1, size - 1);
-        const expectedBytes = end - start + 1;
-
-        // Retry each chunk up to 3 times (network can drop on slow connections)
+        // Retry each photo up to 3 times
         let buf: ArrayBuffer | null = null;
         for (let retry = 0; retry < 3; retry++) {
           try {
-            const res = await fetch(`${apiBase}/api/photos/zip`, {
-              headers: { Range: `bytes=${start}-${end}` },
-            });
-            if (!res.ok && res.status !== 206) throw new Error(`Chunk fetch failed: ${res.status}`);
+            const res = await fetch(photo.r2Url!);
+            if (!res.ok) throw new Error(`Fetch failed: ${res.status}`);
             buf = await res.arrayBuffer();
-            if (buf.byteLength === expectedBytes) break;
-            console.warn(`Chunk incomplete: got ${buf.byteLength}/${expectedBytes}, retry ${retry + 1}`);
-            buf = null;
+            break;
           } catch (err) {
-            console.warn(`Chunk fetch error (retry ${retry + 1}):`, err.message);
+            console.warn(`Photo fetch error (retry ${retry + 1}): ${baseName} — ${err.message}`);
           }
         }
-        if (!buf) throw new Error(`Failed to download chunk at offset ${start}`);
-
-        if (useFileStream && writable) {
-          await writable.write(buf);
-        } else {
-          chunks.push(buf);
+        if (!buf) {
+          console.warn(`Skipping failed photo: ${baseName}`);
+          continue;
         }
+
+        // Add to zip — level 0 = no compression (photos are already compressed, saves CPU)
+        const file = new ZipDeflate(name, { level: 0 });
+        zip.add(file);
+        file.push(new Uint8Array(buf), true);
+
         received += buf.byteLength;
-        const progress = Math.round((received / size) * 100);
+        const progress = Math.round((received / totalBytes) * 100);
         setDownloadProgress(progress);
         const elapsedSec = (Date.now() - startTime) / 1000;
         if (elapsedSec > 0) {
@@ -198,11 +199,18 @@ export default function Gallery() {
         }
       }
 
-      if (useFileStream && writable) {
+      // Finalize zip — this writes the central directory
+      zip.end();
+
+      if (writable) {
         await writable.close();
       } else {
-        // Assemble chunks into blob and trigger download
-        const blob = new Blob(chunks, { type: 'application/zip' });
+        // Assemble zip in memory and trigger download
+        const totalLen = zipChunks.reduce((s, c) => s + c.length, 0);
+        const merged = new Uint8Array(totalLen);
+        let off = 0;
+        for (const c of zipChunks) { merged.set(c, off); off += c.length; }
+        const blob = new Blob([merged], { type: 'application/zip' });
         const blobUrl = URL.createObjectURL(blob);
         const link = document.createElement('a');
         link.href = blobUrl;
@@ -216,7 +224,7 @@ export default function Gallery() {
 
       setDownloadState('done');
       setDownloadProgress(100);
-      showToast(`Download complete (${sizeLabel}). Check your downloads folder.`, 6000);
+      showToast(`Download complete (${sizeLabel}, ${downloadable.length} photos). Check your downloads folder.`, 6000);
       setTimeout(() => { setDownloadState('idle'); setDownloadProgress(0); }, 5000);
     } catch (err) {
       console.error('Download failed:', err);
