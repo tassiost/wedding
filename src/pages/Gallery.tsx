@@ -168,8 +168,9 @@ export default function Gallery() {
         const name = `${String(i + 1).padStart(3, '0')}-${baseName}`;
 
         // Build proxy URL: https://worker.workers.dev/{r2Key}
+        // Encode the key — filenames can have spaces, parentheses, etc.
         const photoUrl = photo.r2Key
-          ? `${r2Proxy}/${photo.r2Key}`
+          ? `${r2Proxy}/${encodeURIComponent(photo.r2Key)}`
           : photo.r2Url!;
 
         let buf: ArrayBuffer | null = null;
