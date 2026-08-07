@@ -4,7 +4,6 @@ import { Link, useNavigate, useLocation } from 'react-router';
 import { ImagePlus, Loader2, X, User, Clock, RefreshCw, Download, ChevronLeft, ChevronRight, Heart, MessageCircle, Grid, LayoutTemplate, Calendar } from 'lucide-react';
 import Toast from '@/components/Toast';
 import { likePhoto, addComment as addCommentApi } from '@/lib/githubApi';
-import { Zip, ZipDeflate } from 'fflate';
 
 export default function Gallery() {
   const { photos, photosError, loadPhotos, isLoading, isAuthenticated, githubConfig } = useApp();
@@ -89,9 +88,7 @@ export default function Gallery() {
 
   const handleDownloadAll = async () => {
     if (photos.length === 0 || downloadState !== 'idle') return;
-    // All API calls go through the Cloudflare Worker (zero Render bandwidth)
     const apiBase = import.meta.env.VITE_API_URL || 'https://wedding-r2-proxy.tassio-wedding.workers.dev';
-    const r2Proxy = import.meta.env.VITE_R2_PROXY_URL || apiBase;
 
     const downloadable = photos.filter(p => p.r2Url);
     if (downloadable.length === 0) {
@@ -102,132 +99,78 @@ export default function Gallery() {
     const totalBytes = downloadable.reduce((sum, p) => sum + (p.fileSize || 0), 0);
     const totalMB = totalBytes / (1024 * 1024);
     const sizeLabel = totalMB > 1024 ? `${(totalMB / 1024).toFixed(1)}GB` : `${totalMB.toFixed(0)}MB`;
-    // Avoid division by zero if photos don't have fileSize metadata
-    const progressBase = totalBytes > 0 ? totalBytes : downloadable.length;
-
-    // @ts-ignore
-    const hasFileSystemAccess = typeof window.showSaveFilePicker === 'function';
-
-    // Without the R2 CORS proxy or on mobile without File System Access API:
-    // fall back to the pre-built zip on R2 (302 redirect — zero Render bandwidth)
-    // The pre-built zip may be stale (missing photos uploaded after it was built)
-    // Mobile browsers crash building zips in memory > ~100MB, so be conservative
-    if (!r2Proxy || (!hasFileSystemAccess && totalMB > 100)) {
-      setDownloadState('idle');
-      showToast(`Download started (${sizeLabel}). Check your browser's download progress.`, 6000);
-      const link = document.createElement('a');
-      link.href = `${apiBase}/api/photos/zip`;
-      link.download = 'wedding-photos.zip';
-      link.style.display = 'none';
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      return;
-    }
 
     setDownloadState('downloading');
     setDownloadProgress(0);
     const startTime = Date.now();
-    let received = 0;
 
     try {
-      let writable: any = null;
-      const zipChunks: Uint8Array[] = [];
+      // Check if Service Worker is available and active
+      const swReg = await navigator.serviceWorker?.getRegistration();
+      const swActive = swReg?.active;
 
-      const zip = new Zip((err, chunk) => {
-        if (err) throw err;
-        if (chunk) {
-          if (writable) {
-            writable.write(chunk);
-          } else {
-            zipChunks.push(chunk);
-          }
-        }
-      });
+      if (swActive) {
+        // === Service Worker streaming path (zero RAM, all browsers) ===
+        // 1. Send photo list to SW
+        swActive.postMessage({
+          type: 'PREPARE_DOWNLOAD',
+          photos: downloadable.map(p => ({ r2Key: p.r2Key, r2Url: p.r2Url, filename: p.filename, id: p.id })),
+          apiBase,
+        });
 
-      if (hasFileSystemAccess) {
-        try {
-          // @ts-ignore
-          const fileHandle = await window.showSaveFilePicker({
-            suggestedName: 'wedding-photos.zip',
-            types: [{ description: 'Zip file', accept: { 'application/zip': ['.zip'] } }],
+        // 2. Wait for SW to confirm it received the list
+        await new Promise<void>((resolve, reject) => {
+          const timeout = setTimeout(() => reject(new Error('SW timeout')), 5000);
+          navigator.serviceWorker.addEventListener('message', function handler(e) {
+            if (e.data.type === 'DOWNLOAD_PREPARED') {
+              clearTimeout(timeout);
+              navigator.serviceWorker.removeEventListener('message', handler);
+              resolve();
+            }
           });
-          writable = await fileHandle.createWritable();
-        } catch (pickerErr) {
-          if (pickerErr.name === 'AbortError') {
-            setDownloadState('idle');
-            setDownloadProgress(0);
-            return;
+        });
+
+        // 3. Set up progress listener
+        const progressHandler = (e: MessageEvent) => {
+          if (e.data.type === 'DOWNLOAD_PROGRESS') {
+            const pct = Math.round((e.data.done / e.data.total) * 100);
+            setDownloadProgress(pct);
+            const elapsedSec = (Date.now() - startTime) / 1000;
+            if (elapsedSec > 0 && e.data.done > 0) {
+              const mbDone = (e.data.done / e.data.total) * totalMB;
+              setDownloadSpeed(Math.round(mbDone / elapsedSec));
+            }
           }
-          console.log('File System Access API error, using blob fallback:', pickerErr.message);
-        }
-      }
+        };
+        navigator.serviceWorker.addEventListener('message', progressHandler);
 
-      // Fetch each photo through the CORS proxy (Worker → R2, both on Cloudflare = free)
-      for (let i = 0; i < downloadable.length; i++) {
-        const photo = downloadable[i];
-        const baseName = photo.filename || `${photo.id}.bin`;
-        const name = `${String(i + 1).padStart(3, '0')}-${baseName}`;
+        // 4. Trigger the download via navigation — SW intercepts /__download_zip__
+        // and responds with Content-Disposition: attachment, causing the browser
+        // to download the file. The browser's download manager streams it to disk.
+        window.location.href = '/__download_zip__';
 
-        // Build proxy URL: https://worker.workers.dev/{r2Key}
-        // Encode the key — filenames can have spaces, parentheses, etc.
-        const photoUrl = photo.r2Key
-          ? `${r2Proxy}/${encodeURIComponent(photo.r2Key)}`
-          : photo.r2Url!;
+        // 5. Clean up listener after download completes
+        setTimeout(() => {
+          navigator.serviceWorker.removeEventListener('message', progressHandler);
+        }, 60000);
 
-        let buf: ArrayBuffer | null = null;
-        for (let retry = 0; retry < 3; retry++) {
-          try {
-            const res = await fetch(photoUrl);
-            if (!res.ok) throw new Error(`Fetch failed: ${res.status}`);
-            buf = await res.arrayBuffer();
-            break;
-          } catch (err) {
-            console.warn(`Photo fetch error (retry ${retry + 1}): ${baseName} — ${err.message}`);
-          }
-        }
-        if (!buf) {
-          console.warn(`Skipping failed photo: ${baseName}`);
-          continue;
-        }
-
-        const file = new ZipDeflate(name, { level: 0 });
-        zip.add(file);
-        file.push(new Uint8Array(buf), true);
-
-        received += buf.byteLength;
-        setDownloadProgress(Math.round((received / progressBase) * 100));
-        const elapsedSec = (Date.now() - startTime) / 1000;
-        if (elapsedSec > 0) {
-          setDownloadSpeed(Math.round((received / (1024 * 1024)) / elapsedSec));
-        }
-      }
-
-      zip.end();
-
-      if (writable) {
-        await writable.close();
+        setDownloadState('done');
+        setDownloadProgress(100);
+        showToast(`Download started (${sizeLabel}, ${downloadable.length} photos). Check your browser's download progress.`, 8000);
+        setTimeout(() => { setDownloadState('idle'); setDownloadProgress(0); }, 5000);
       } else {
-        const totalLen = zipChunks.reduce((s, c) => s + c.length, 0);
-        const merged = new Uint8Array(totalLen);
-        let off = 0;
-        for (const c of zipChunks) { merged.set(c, off); off += c.length; }
-        const blob = new Blob([merged], { type: 'application/zip' });
-        const blobUrl = URL.createObjectURL(blob);
+        // === Fallback: no Service Worker (very old browser) ===
+        // Use the pre-built zip on R2 via 302 redirect
+        showToast(`Download started (${sizeLabel}). Check your browser's download progress.`, 6000);
         const link = document.createElement('a');
-        link.href = blobUrl;
+        link.href = `${apiBase}/api/photos/zip`;
         link.download = 'wedding-photos.zip';
         link.style.display = 'none';
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
-        setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
+        setDownloadState('idle');
       }
-
-      setDownloadState('done');
-      setDownloadProgress(100);
-      showToast(`Download complete (${sizeLabel}, ${downloadable.length} photos).`, 6000);
-      setTimeout(() => { setDownloadState('idle'); setDownloadProgress(0); }, 5000);
     } catch (err) {
       console.error('Download failed:', err);
       showToast('Download failed. Please try again.');
