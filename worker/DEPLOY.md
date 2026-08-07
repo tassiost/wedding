@@ -1,59 +1,86 @@
-# Deploy the R2 CORS Proxy Worker
+# Deploy the Cloudflare Worker
 
-This Cloudflare Worker adds CORS headers to R2 responses, enabling the browser
-to fetch photos directly from R2 and build the zip client-side (zero Render bandwidth).
+The Worker is the entire backend — it handles all API endpoints, file uploads, and serves as a CORS proxy for R2. All traffic stays on Cloudflare's network (Worker → R2 binding = free, no egress).
+
+## API Endpoints
+
+| Method | Path | Description |
+|---|---|---|
+| GET | `/health` | Health check |
+| GET | `/api/photos` | Get all photos metadata (with ETag/304 support) |
+| POST | `/api/photos` | Upload a photo (multipart/form-data) |
+| POST | `/api/photos/:id/like` | Like/unlike a photo |
+| POST | `/api/photos/:id/comments` | Add a comment |
+| GET | `/api/photos/zip` | 302 redirect to pre-built zip on R2 (fallback) |
+| GET | `/:r2Key` | R2 CORS proxy for individual photo downloads |
 
 ## Prerequisites
 
 - A Cloudflare account (you already have one for R2)
 - Node.js installed
+- R2 bucket named `wedding` with public access enabled
 
 ## Steps
 
-1. Install Wrangler (Cloudflare's CLI):
-   ```
+1. Install Wrangler:
+   ```bash
    npm install -g wrangler
    ```
 
 2. Login to Cloudflare:
-   ```
+   ```bash
    wrangler login
    ```
-   This opens a browser to authenticate with your Cloudflare account.
 
 3. Deploy the Worker:
-   ```
+   ```bash
    cd worker
    wrangler deploy
    ```
-   This uploads the Worker to Cloudflare. The output will show the Worker URL, e.g.:
+   Output:
    ```
    https://wedding-r2-proxy.<your-account>.workers.dev
    ```
 
-4. Set the Worker URL as an environment variable on Render:
-   - Go to your Render dashboard → wedding-backend → Environment
-   - Add: `VITE_R2_PROXY_URL` = `https://wedding-r2-proxy.<your-account>.workers.dev`
-   - Wait for Render to rebuild
+4. Set the Worker URL in the frontend `.env`:
+   ```
+   VITE_API_URL=https://wedding-r2-proxy.<your-account>.workers.dev
+   VITE_R2_PROXY_URL=https://wedding-r2-proxy.<your-account>.workers.dev
+   ```
 
-   **OR** if you're building locally and deploying the frontend to GitHub Pages:
-   - Create a `.env` file in the project root:
-     ```
-     VITE_R2_PROXY_URL=https://wedding-r2-proxy.<your-account>.workers.dev
-     ```
-   - Run `npm run build` and push the `docs/` folder to GitHub
+5. Rebuild and redeploy the frontend:
+   ```bash
+   npm run build
+   npx wrangler pages deploy docs --project-name vivi-wedding --branch main
+   ```
+
+## Initial Data Migration
+
+If migrating from the old GitHub-based metadata, upload `photos.json` to R2:
+
+```bash
+npx wrangler r2 object put wedding/_metadata/photos.json \
+  --file=data/photos.json \
+  --content-type=application/json \
+  --remote
+```
 
 ## How it works
 
-- Browser fetches photos through the Worker (e.g. `https://worker.dev/photo-key.jpg`)
-- Worker reads from R2 via internal binding (free, fast — no public internet)
-- Worker adds `Access-Control-Allow-Origin: *` header
-- Browser builds the zip client-side with fflate
-- On desktop Chrome/Edge: streams to disk via File System Access API (constant RAM)
-- On mobile: falls back to pre-built zip on R2 (302 redirect, zero Render bandwidth)
+- **Gallery load**: Browser fetches `/api/photos` → Worker reads `photos.json` from R2 → returns JSON with ETag
+- **Upload**: Browser POSTs multipart form → Worker writes file to R2 + updates `photos.json`
+- **Likes/comments**: Browser POSTs → Worker updates `photos.json` in R2
+- **Download All**: Service Worker intercepts `/__download_zip__` → fetches each photo through the Worker → streams a store-only zip to the browser's download manager (zero RAM)
+- **Single download**: Browser fetches `/:r2Key` through Worker → Worker adds CORS headers → browser saves blob
+- **Gallery images**: `<img src={r2Url}>` loads directly from R2 public URL (no Worker needed)
+
+## Limits (Free Tier)
+
+- **Requests**: 100,000/day (wedding uses ~6,300/day)
+- **CPU**: 10ms per request (enough for R2 reads + JSON manipulation)
+- **Request body**: 100MB max (limits upload file size)
+- **R2 storage**: 10GB free (wedding uses 0.83GB)
 
 ## Cost
 
-- Free tier: 100,000 requests/day
-- 359 photos × 20 downloads = 7,180 requests (well within limits)
-- No egress fees (Cloudflare Workers + R2 = all internal)
+$0/month. All traffic is internal to Cloudflare (Worker → R2 binding).
